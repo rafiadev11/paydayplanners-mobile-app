@@ -1,21 +1,49 @@
 {
   "name": "paydayplanners-mobile-app",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "dev": "node scripts/switch-endpoints.cjs local",
+    "prod": "node scripts/switch-endpoints.cjs prod",
+    "env": "node scripts/switch-endpoints.cjs status",
+    "env:local": "node scripts/switch-endpoints.cjs local",
+    "env:prod": "node scripts/switch-endpoints.cjs prod",
+    "env:status": "node scripts/switch-endpoints.cjs status",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "expo:config:check": "npx expo config --json > /dev/null"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~55.0.6",
+    "axios": "^1.13.6",
     "expo": "~55.0.5",
+    "expo-constants": "~55.0.7",
+    "expo-crypto": "~55.0.9",
+    "expo-linking": "~55.0.7",
+    "expo-router": "~55.0.4",
+    "expo-secure-store": "~55.0.8",
+    "expo-splash-screen": "~55.0.10",
     "expo-status-bar": "~55.0.4",
     "react": "19.2.0",
-    "react-native": "0.83.2"
+    "react-dom": "19.2.0",
+    "react-native": "0.83.2",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.39.1",
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.1",
+    "eslint-config-expo": "latest",
+    "prettier": "^3.6.2",
     "typescript": "~5.9.2"
   },
   "private": true
