@@ -50,6 +50,10 @@ function paycheckTone(paycheck: ForecastPaycheck) {
   return "light" as const;
 }
 
+function forecastLabel(hasProAccess: boolean | undefined) {
+  return hasProAccess ? "12-month forecast" : "90-day forecast";
+}
+
 export default function PlanScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -57,6 +61,7 @@ export default function PlanScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const activeForecastLabel = forecastLabel(user?.billing?.has_pro_access);
 
   const loadForecast = useCallback(
     async (refresh = false) => {
@@ -99,7 +104,7 @@ export default function PlanScreen() {
     >
       <ScreenHeader
         eyebrow="Forecast"
-        subtitle="A paycheck-by-paycheck timeline of what gets covered, what stays free, and where risk builds."
+        subtitle={`A paycheck-by-paycheck timeline across your ${activeForecastLabel}, showing what gets covered, what stays free, and where risk builds.`}
         title="Plan"
       />
 
@@ -124,7 +129,7 @@ export default function PlanScreen() {
           <SurfaceCard tone="accent">
             <SectionTitle
               subtitle={`${formatDateWithYear(forecast.window.start_date)} to ${formatDateWithYear(forecast.window.end_date)}`}
-              title="Window summary"
+              title={activeForecastLabel}
             />
             <View style={styles.metricGrid}>
               <MetricTile
@@ -249,12 +254,7 @@ export default function PlanScreen() {
                       </Text>
                     ) : null}
                   </View>
-                ) : (
-                  <EmptyState
-                    body="This paycheck is still mostly free and can absorb upcoming bills or savings goals."
-                    title="No allocations yet"
-                  />
-                )}
+                ) : null}
               </SurfaceCard>
             ))
           ) : (

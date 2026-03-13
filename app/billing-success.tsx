@@ -1,6 +1,5 @@
-import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { fetchBillingStatus, syncCheckoutSession } from "@features/billing/api";
@@ -21,15 +20,22 @@ export default function BillingSuccessScreen() {
   const { refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const syncedKeyRef = useRef<string | null>(null);
 
-  const syncBilling = useCallback(async () => {
+  const sessionId = Array.isArray(params.session_id)
+    ? params.session_id[0]
+    : params.session_id;
+  const syncKey = sessionId ?? "__missing_session__";
+
+  const syncBilling = useEffectEvent(async (force = false) => {
+    if (!force && syncedKeyRef.current === syncKey) {
+      return;
+    }
+
+    syncedKeyRef.current = syncKey;
     setLoading(true);
 
     try {
-      const sessionId = Array.isArray(params.session_id)
-        ? params.session_id[0]
-        : params.session_id;
-
       if (sessionId) {
         await syncCheckoutSession(sessionId);
       }
@@ -41,13 +47,11 @@ export default function BillingSuccessScreen() {
     } finally {
       setLoading(false);
     }
-  }, [params.session_id, refreshUser]);
+  });
 
-  useFocusEffect(
-    useCallback(() => {
-      void syncBilling();
-    }, [syncBilling]),
-  );
+  useEffect(() => {
+    void syncBilling();
+  }, [syncBilling, syncKey]);
 
   return (
     <AppScreen contentContainerStyle={styles.content}>
@@ -63,7 +67,8 @@ export default function BillingSuccessScreen() {
         <ErrorState
           body={error}
           onRetry={() => {
-            void syncBilling();
+            syncedKeyRef.current = null;
+            void syncBilling(true);
           }}
           title="Upgrade sync incomplete"
         />

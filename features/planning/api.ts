@@ -242,7 +242,7 @@ function dateString(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
-function buildWindow(days = 120) {
+function buildWindow(days = 90) {
   const start = new Date();
   const end = new Date();
   end.setDate(end.getDate() + days);
