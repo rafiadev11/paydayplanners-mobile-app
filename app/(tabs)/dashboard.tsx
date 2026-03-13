@@ -1,8 +1,10 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   Modal,
   Pressable,
   RefreshControl,
@@ -192,67 +194,132 @@ function AccountDrawer({
   onOpenBilling: () => void;
   onSignOut: () => void;
 }) {
+  const [mounted, setMounted] = useState(visible);
+  const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+
+      return;
+    }
+
+    Animated.timing(progress, {
+      toValue: 0,
+      duration: 220,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        setMounted(false);
+      }
+    });
+  }, [progress, visible]);
+
+  const backdropOpacity = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  const panelTranslateX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [72, 0],
+  });
+
+  const panelOpacity = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.92, 1],
+  });
+
+  const panelScale = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.985, 1],
+  });
+
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <Modal
-      animationType="fade"
-      onRequestClose={onClose}
-      transparent
-      visible={visible}
-    >
+    <Modal onRequestClose={onClose} transparent visible={mounted}>
       <View style={styles.drawerRoot}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.drawerBackdropShade, { opacity: backdropOpacity }]}
+        />
         <Pressable style={styles.drawerBackdrop} onPress={onClose} />
-        <SafeAreaView edges={["top", "bottom"]} style={styles.drawerPanel}>
-          <View style={styles.drawerHeader}>
-            <View style={styles.drawerHeaderCopy}>
-              <Text style={styles.drawerEyebrow}>Account</Text>
-              <Text style={styles.drawerTitle}>{userName ?? "Account"}</Text>
+        <Animated.View
+          style={[
+            styles.drawerPanelWrap,
+            {
+              opacity: panelOpacity,
+              transform: [
+                { translateX: panelTranslateX },
+                { scale: panelScale },
+              ],
+            },
+          ]}
+        >
+          <SafeAreaView edges={["top", "bottom"]} style={styles.drawerPanel}>
+            <View style={styles.drawerHeader}>
+              <View style={styles.drawerHeaderCopy}>
+                <Text style={styles.drawerEyebrow}>Account</Text>
+                <Text style={styles.drawerTitle}>{userName ?? "Account"}</Text>
+              </View>
+              <Pressable
+                hitSlop={10}
+                onPress={onClose}
+                style={({ pressed }) => [
+                  styles.drawerCloseButton,
+                  pressed ? styles.accountButtonPressed : null,
+                ]}
+              >
+                <MaterialCommunityIcons
+                  color={theme.colors.ink}
+                  name="close"
+                  size={20}
+                />
+              </Pressable>
             </View>
-            <Pressable
-              hitSlop={10}
-              onPress={onClose}
-              style={({ pressed }) => [
-                styles.drawerCloseButton,
-                pressed ? styles.accountButtonPressed : null,
-              ]}
-            >
-              <MaterialCommunityIcons
-                color={theme.colors.ink}
-                name="close"
-                size={20}
+
+            <View style={styles.drawerGroup}>
+              <AccountDrawerItem
+                icon="credit-card-outline"
+                onPress={onOpenBilling}
+                subtitle="Manage your plan, trial, and subscription details."
+                title="My subscription"
               />
-            </Pressable>
-          </View>
+              <AccountDrawerItem
+                disabled
+                icon="account-edit-outline"
+                subtitle="Update your name, email, and personal profile details."
+                title="Account info"
+              />
+              <AccountDrawerItem
+                disabled
+                icon="delete-outline"
+                subtitle="Permanently remove your account and planning data."
+                title="Delete account"
+                tone="danger"
+              />
+            </View>
 
-          <View style={styles.drawerGroup}>
-            <AccountDrawerItem
-              icon="credit-card-outline"
-              onPress={onOpenBilling}
-              subtitle="Manage your plan, trial, and subscription details."
-              title="My subscription"
-            />
-            <AccountDrawerItem
-              disabled
-              icon="account-edit-outline"
-              subtitle="Update your name, email, and personal profile details."
-              title="Account info"
-            />
-            <AccountDrawerItem
-              disabled
-              icon="delete-outline"
-              subtitle="Permanently remove your account and planning data."
-              title="Delete account"
-              tone="danger"
-            />
-          </View>
-
-          <View style={styles.drawerFooter}>
-            <SecondaryButton
-              icon="logout"
-              label="Log out"
-              onPress={onSignOut}
-            />
-          </View>
-        </SafeAreaView>
+            <View style={styles.drawerFooter}>
+              <SecondaryButton
+                icon="logout"
+                label="Log out"
+                onPress={onSignOut}
+              />
+            </View>
+          </SafeAreaView>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -891,19 +958,35 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     justifyContent: "flex-end",
-    backgroundColor: withAlpha(theme.colors.ink, 0.18),
+  },
+  drawerBackdropShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: withAlpha(theme.colors.ink, 0.24),
   },
   drawerBackdrop: {
     flex: 1,
   },
+  drawerPanelWrap: {
+    width: "80%",
+    maxWidth: 344,
+    shadowColor: theme.colors.ink,
+    shadowOffset: {
+      width: -10,
+      height: 0,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 28,
+    elevation: 18,
+  },
   drawerPanel: {
-    width: "84%",
-    maxWidth: 360,
+    flex: 1,
     borderLeftWidth: 1,
     borderLeftColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceStrong,
+    borderTopLeftRadius: theme.radius.lg,
+    borderBottomLeftRadius: theme.radius.lg,
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xxl + theme.spacing.sm,
+    paddingTop: theme.spacing.xxl + theme.spacing.xl,
     paddingBottom: theme.spacing.xxl,
     gap: theme.spacing.lg,
   },
