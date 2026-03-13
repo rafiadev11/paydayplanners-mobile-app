@@ -1,23 +1,30 @@
-import { Link, Redirect } from "expo-router";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
+import {
+  Field,
+  PrimaryButton,
+  SecondaryButton,
+  SurfaceCard,
+} from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
 export default function RegisterScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user, signUp } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -47,86 +54,154 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.container}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.safeArea}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: insets.top + theme.spacing.md,
+            paddingBottom: insets.bottom + theme.spacing.xl,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.card}>
-            <Text style={styles.eyebrow}>PaydayPlanners</Text>
-            <Text style={styles.title}>Create account</Text>
-            <Text style={styles.subtitle}>
-              This uses the same `POST /api/v1/register` token flow that the
-              Laravel backend already exposes.
-            </Text>
+        <SurfaceCard tone="dark" style={styles.heroCard}>
+          <Text style={styles.eyebrow}>PaydayPlanners</Text>
+          <Text style={styles.title}>Create your cashflow command center.</Text>
+          <Text style={styles.subtitle}>
+            Add income, bills, and savings goals once, then let the planner show
+            how every paycheck gets reduced before you spend it.
+          </Text>
 
-            <TextInput
-              autoCapitalize="words"
-              onChangeText={setName}
-              placeholder="Full name"
-              placeholderTextColor={theme.colors.muted}
-              style={styles.input}
-              value={name}
-            />
-            <TextInput
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              onChangeText={setEmail}
-              placeholder="Email"
-              placeholderTextColor={theme.colors.muted}
-              style={styles.input}
-              value={email}
-            />
-            <TextInput
-              autoCapitalize="none"
-              onChangeText={setPassword}
-              placeholder="Password"
-              placeholderTextColor={theme.colors.muted}
-              secureTextEntry
-              style={styles.input}
-              value={password}
-            />
-            <TextInput
-              autoCapitalize="none"
-              onChangeText={setPasswordConfirmation}
-              placeholder="Confirm password"
-              placeholderTextColor={theme.colors.muted}
-              secureTextEntry
-              style={styles.input}
-              value={passwordConfirmation}
-            />
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <Pressable
-              disabled={loading}
-              onPress={() => {
-                void submit();
-              }}
-              style={({ pressed }) => [
-                styles.button,
-                pressed && !loading ? styles.buttonPressed : null,
-              ]}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.buttonText}>Register</Text>
-              )}
-            </Pressable>
-
-            <Text style={styles.footer}>
-              Already have an account?{" "}
-              <Link href="/login" style={styles.link}>
-                Sign in
-              </Link>
-            </Text>
+          <View style={styles.heroPoints}>
+            <View style={styles.heroPoint}>
+              <MaterialCommunityIcons
+                color={theme.colors.accent}
+                name="timeline-text-outline"
+                size={18}
+              />
+              <Text style={styles.heroPointText}>90-day forecast view</Text>
+            </View>
+            <View style={styles.heroPoint}>
+              <MaterialCommunityIcons
+                color={theme.colors.accent}
+                name="calendar-clock-outline"
+                size={18}
+              />
+              <Text style={styles.heroPointText}>
+                Recurring and one-time support
+              </Text>
+            </View>
+            <View style={styles.heroPoint}>
+              <MaterialCommunityIcons
+                color={theme.colors.accent}
+                name="shield-check-outline"
+                size={18}
+              />
+              <Text style={styles.heroPointText}>
+                Secure token-based sessions
+              </Text>
+            </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </SurfaceCard>
+
+        <SurfaceCard style={styles.formCard}>
+          <View style={styles.modeSwitch}>
+            <Pressable
+              onPress={() => {
+                router.replace("/login");
+              }}
+              style={styles.modeChip}
+            >
+              <Text style={styles.modeChipLabel}>I have an account</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                router.replace("/register");
+              }}
+              style={[styles.modeChip, styles.modeChipActive]}
+            >
+              <Text style={[styles.modeChipLabel, styles.modeChipLabelActive]}>
+                I am new here
+              </Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.formTitle}>Create account</Text>
+
+          <Field
+            autoCapitalize="words"
+            label="Full name"
+            onChangeText={setName}
+            placeholder="Alex Jordan"
+            returnKeyType="next"
+            textContentType="name"
+            value={name}
+          />
+          <Field
+            autoCapitalize="none"
+            autoComplete="email"
+            autoCorrect={false}
+            keyboardType="email-address"
+            label="Email"
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            returnKeyType="next"
+            textContentType="emailAddress"
+            value={email}
+          />
+          <Field
+            autoCapitalize="none"
+            autoComplete="password-new"
+            autoCorrect={false}
+            label="Password"
+            onChangeText={setPassword}
+            placeholder="Password"
+            returnKeyType="next"
+            secureTextEntry
+            textContentType="newPassword"
+            value={password}
+          />
+          <Field
+            autoCapitalize="none"
+            autoComplete="password-new"
+            autoCorrect={false}
+            label="Confirm password"
+            onChangeText={setPasswordConfirmation}
+            onSubmitEditing={() => {
+              void submit();
+            }}
+            placeholder="Confirm password"
+            returnKeyType="go"
+            secureTextEntry
+            textContentType="password"
+            value={passwordConfirmation}
+          />
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <PrimaryButton
+            disabled={loading}
+            icon="account-plus-outline"
+            label={loading ? "Creating account..." : "Create account"}
+            onPress={() => {
+              void submit();
+            }}
+          />
+          <SecondaryButton
+            disabled={loading}
+            label="Already have an account? Sign in"
+            onPress={() => {
+              router.push("/login");
+            }}
+          />
+        </SurfaceCard>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -140,71 +215,74 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    justifyContent: "center",
     padding: 24,
+    gap: 18,
   },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 12,
-    padding: 24,
+  heroCard: {
+    gap: 16,
   },
   eyebrow: {
-    color: theme.colors.primary,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
+    color: theme.colors.accent,
+    ...theme.typography.eyebrow,
   },
   title: {
-    color: theme.colors.text,
-    fontSize: 32,
-    fontWeight: "700",
+    color: theme.colors.white,
+    ...theme.typography.title,
   },
   subtitle: {
-    color: theme.colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
-    borderColor: theme.colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    color: theme.colors.text,
-    fontSize: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  button: {
-    alignItems: "center",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 14,
-    marginTop: 8,
-    paddingVertical: 14,
-  },
-  buttonPressed: {
-    opacity: 0.9,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+    color: theme.colors.backgroundMuted,
+    ...theme.typography.body,
   },
   error: {
     color: theme.colors.danger,
     fontSize: 14,
   },
-  footer: {
+  heroPoints: {
+    gap: 10,
+  },
+  heroPoint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  heroPointText: {
+    color: theme.colors.white,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  formCard: {
+    gap: 16,
+  },
+  modeSwitch: {
+    flexDirection: "row",
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 4,
+    gap: 4,
+  },
+  modeChip: {
+    flex: 1,
+    borderRadius: theme.radius.pill,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeChipActive: {
+    backgroundColor: theme.colors.ink,
+  },
+  modeChipLabel: {
     color: theme.colors.muted,
     fontSize: 14,
-    marginTop: 4,
-  },
-  link: {
-    color: theme.colors.primary,
     fontWeight: "700",
+  },
+  modeChipLabelActive: {
+    color: theme.colors.white,
+  },
+  formTitle: {
+    color: theme.colors.ink,
+    ...theme.typography.cardTitle,
   },
 });

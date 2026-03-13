@@ -1,22 +1,30 @@
-import { Link, Redirect } from "expo-router";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
+import {
+  Field,
+  PrimaryButton,
+  SecondaryButton,
+  SurfaceCard,
+} from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
 export default function LoginScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,66 +47,132 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.container}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.safeArea}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          {
+            paddingTop: insets.top + theme.spacing.md,
+            paddingBottom: insets.bottom + theme.spacing.xl,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card}>
+        <SurfaceCard tone="dark" style={styles.heroCard}>
           <Text style={styles.eyebrow}>PaydayPlanners</Text>
-          <Text style={styles.title}>Sign in</Text>
+          <Text style={styles.title}>Plan every paycheck before it lands.</Text>
           <Text style={styles.subtitle}>
-            Connect this Expo app to the Laravel backend in `paydayplanners`.
+            See the true remaining balance on each paycheck after bills, savings
+            goals, and one-time expenses are assigned.
           </Text>
 
-          <TextInput
+          <View style={styles.heroPoints}>
+            <View style={styles.heroPoint}>
+              <MaterialCommunityIcons
+                color={theme.colors.accent}
+                name="cash-fast"
+                size={18}
+              />
+              <Text style={styles.heroPointText}>Paycheck-first forecast</Text>
+            </View>
+            <View style={styles.heroPoint}>
+              <MaterialCommunityIcons
+                color={theme.colors.accent}
+                name="receipt-text-check-outline"
+                size={18}
+              />
+              <Text style={styles.heroPointText}>
+                Bills mapped automatically
+              </Text>
+            </View>
+            <View style={styles.heroPoint}>
+              <MaterialCommunityIcons
+                color={theme.colors.accent}
+                name="bullseye-arrow"
+                size={18}
+              />
+              <Text style={styles.heroPointText}>
+                Savings treated as real commitments
+              </Text>
+            </View>
+          </View>
+        </SurfaceCard>
+
+        <SurfaceCard style={styles.formCard}>
+          <View style={styles.modeSwitch}>
+            <Pressable
+              onPress={() => {
+                router.replace("/login");
+              }}
+              style={[styles.modeChip, styles.modeChipActive]}
+            >
+              <Text style={[styles.modeChipLabel, styles.modeChipLabelActive]}>
+                I have an account
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                router.replace("/register");
+              }}
+              style={styles.modeChip}
+            >
+              <Text style={styles.modeChipLabel}>I am new here</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.formTitle}>Sign in</Text>
+
+          <Field
             autoCapitalize="none"
             autoComplete="email"
+            autoCorrect={false}
             keyboardType="email-address"
+            label="Email"
             onChangeText={setEmail}
-            placeholder="Email"
-            placeholderTextColor={theme.colors.muted}
-            style={styles.input}
+            placeholder="you@example.com"
+            returnKeyType="next"
             value={email}
           />
-          <TextInput
+          <Field
             autoCapitalize="none"
+            autoComplete="password"
+            autoCorrect={false}
+            label="Password"
             onChangeText={setPassword}
+            onSubmitEditing={() => {
+              void submit();
+            }}
             placeholder="Password"
-            placeholderTextColor={theme.colors.muted}
+            returnKeyType="go"
             secureTextEntry
-            style={styles.input}
+            textContentType="password"
             value={password}
           />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Pressable
+          <PrimaryButton
             disabled={loading}
+            icon="login"
+            label={loading ? "Signing in..." : "Sign in"}
             onPress={() => {
               void submit();
             }}
-            style={({ pressed }) => [
-              styles.button,
-              pressed && !loading ? styles.buttonPressed : null,
-            ]}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>Sign in</Text>
-            )}
-          </Pressable>
-
-          <Text style={styles.footer}>
-            Need an account?{" "}
-            <Link href="/register" style={styles.link}>
-              Register
-            </Link>
-          </Text>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          />
+          <SecondaryButton
+            disabled={loading}
+            label="New here? Create account"
+            onPress={() => {
+              router.push("/register");
+            }}
+          />
+        </SurfaceCard>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -108,72 +182,75 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   container: {
-    flex: 1,
-    justifyContent: "center",
+    flexGrow: 1,
     padding: 24,
+    gap: 18,
   },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 12,
-    padding: 24,
+  heroCard: {
+    gap: 16,
   },
   eyebrow: {
-    color: theme.colors.primary,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
+    color: theme.colors.accent,
+    ...theme.typography.eyebrow,
   },
   title: {
-    color: theme.colors.text,
-    fontSize: 32,
-    fontWeight: "700",
+    color: theme.colors.white,
+    ...theme.typography.title,
   },
   subtitle: {
-    color: theme.colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
-    borderColor: theme.colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    color: theme.colors.text,
-    fontSize: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  button: {
-    alignItems: "center",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 14,
-    marginTop: 8,
-    paddingVertical: 14,
-  },
-  buttonPressed: {
-    opacity: 0.9,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+    color: theme.colors.backgroundMuted,
+    ...theme.typography.body,
   },
   error: {
     color: theme.colors.danger,
     fontSize: 14,
   },
-  footer: {
+  heroPoints: {
+    gap: 10,
+  },
+  heroPoint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  heroPointText: {
+    color: theme.colors.white,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  formCard: {
+    gap: 16,
+  },
+  modeSwitch: {
+    flexDirection: "row",
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 4,
+    gap: 4,
+  },
+  modeChip: {
+    flex: 1,
+    borderRadius: theme.radius.pill,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeChipActive: {
+    backgroundColor: theme.colors.ink,
+  },
+  modeChipLabel: {
     color: theme.colors.muted,
     fontSize: 14,
-    marginTop: 4,
-  },
-  link: {
-    color: theme.colors.primary,
     fontWeight: "700",
+  },
+  modeChipLabelActive: {
+    color: theme.colors.white,
+  },
+  formTitle: {
+    color: theme.colors.ink,
+    ...theme.typography.cardTitle,
   },
 });

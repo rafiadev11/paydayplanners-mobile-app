@@ -1,10 +1,13 @@
 import { api, setAuthToken } from "@shared/api/client";
 import { getDeviceName } from "@shared/device/id";
+import type { BillingSummary } from "@features/billing/types";
 
 export type User = {
   id: number | string;
   name: string;
   email: string;
+  timezone?: string | null;
+  billing?: BillingSummary;
   email_verified_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
