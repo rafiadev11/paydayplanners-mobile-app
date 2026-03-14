@@ -18,7 +18,13 @@ function HeaderCloseButton() {
       accessibilityLabel="Close"
       hitSlop={10}
       onPress={() => {
-        router.back();
+        if (router.canGoBack()) {
+          router.back();
+
+          return;
+        }
+
+        router.replace("/dashboard");
       }}
       style={({ pressed }) => [
         styles.closeButton,

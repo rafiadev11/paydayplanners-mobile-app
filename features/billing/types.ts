@@ -15,6 +15,9 @@ export type BillingStatus = BillingSummary & {
     type: string;
     stripe_status: string;
     stripe_price?: string | null;
+    current_interval?: "month" | "year" | null;
+    current_plan_name?: string | null;
+    current_amount_cents?: number | null;
     ends_at?: string | null;
     trial_ends_at?: string | null;
     on_grace_period?: boolean;

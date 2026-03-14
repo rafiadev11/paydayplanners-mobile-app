@@ -60,7 +60,7 @@ export default function BillingSuccessScreen() {
           <ActivityIndicator color={theme.colors.primary} />
           <Text style={styles.title}>Finishing your upgrade</Text>
           <Text style={styles.body}>
-            We are confirming your Stripe checkout and refreshing Pro access.
+            We are confirming your upgrade and refreshing Pro access.
           </Text>
         </SurfaceCard>
       ) : error ? (

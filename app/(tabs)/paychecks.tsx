@@ -95,6 +95,13 @@ function dayDistanceLabel(value: string) {
   return `In ${distance} days`;
 }
 
+function windowEndLabel(days: number) {
+  const end = new Date();
+  end.setDate(end.getDate() + days);
+
+  return formatDateWithYear(end.toISOString().slice(0, 10));
+}
+
 function timingSummary(
   schedule: PaySchedule,
   nextOccurrence: PaycheckOccurrence | null,
@@ -427,6 +434,8 @@ export default function PaychecksScreen() {
   const activeSchedules = schedules.filter((schedule) => schedule.is_active);
   const canCreateSchedule =
     Boolean(user?.billing?.has_pro_access) || schedules.length < 1;
+  const hasProAccess = Boolean(user?.billing?.has_pro_access);
+  const freeWindowEnd = windowEndLabel(90);
 
   return (
     <AppScreen
@@ -550,6 +559,28 @@ export default function PaychecksScreen() {
               title="Nothing upcoming"
             />
           )}
+
+          {!hasProAccess && schedules.length > 0 ? (
+            <SurfaceCard tone="accent" style={styles.freeWindowCard}>
+              <Text style={styles.freeWindowEyebrow}>Free window</Text>
+              <Text style={styles.freeWindowTitle}>
+                Paycheck dates show through {freeWindowEnd}
+              </Text>
+              <Text style={styles.freeWindowBody}>
+                Free includes the next 90 days of paycheck dates. Upgrade to Pro
+                to keep scanning the rest of your 12-month income timeline.
+              </Text>
+              <View style={styles.freeWindowActions}>
+                <PrimaryButton
+                  icon="crown-outline"
+                  label="Unlock Pro"
+                  onPress={() => {
+                    router.push("/billing");
+                  }}
+                />
+              </View>
+            </SurfaceCard>
+          ) : null}
         </>
       )}
     </AppScreen>
@@ -684,6 +715,29 @@ const styles = StyleSheet.create({
   },
   monthStack: {
     gap: theme.spacing.lg,
+  },
+  freeWindowCard: {
+    gap: theme.spacing.md,
+  },
+  freeWindowEyebrow: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  freeWindowTitle: {
+    color: theme.colors.ink,
+    ...theme.typography.cardTitle,
+  },
+  freeWindowBody: {
+    color: theme.colors.muted,
+    ...theme.typography.body,
+  },
+  freeWindowActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
   },
   monthSection: {
     gap: theme.spacing.md,
