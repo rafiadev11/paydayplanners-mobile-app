@@ -95,6 +95,8 @@ export type SavingsGoal = {
   remaining_target: string;
   start_date: string;
   target_date?: string | null;
+  completed_at?: string | null;
+  is_completed: boolean;
   priority: number;
   is_active: boolean;
   notes?: string | null;

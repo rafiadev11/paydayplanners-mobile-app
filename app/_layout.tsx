@@ -71,6 +71,20 @@ function RootNavigator() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="register" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="forgot-password"
+        options={{
+          title: "Forgot password",
+          headerBackButtonDisplayMode: "minimal",
+        }}
+      />
+      <Stack.Screen
+        name="reset-password"
+        options={{
+          title: "Reset password",
+          headerBackButtonDisplayMode: "minimal",
+        }}
+      />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
         name="billing"
@@ -91,6 +105,13 @@ function RootNavigator() {
         options={{
           title: "Checkout canceled",
           ...modalOptions,
+        }}
+      />
+      <Stack.Screen
+        name="goals"
+        options={{
+          title: "Goals",
+          headerBackButtonDisplayMode: "minimal",
         }}
       />
       <Stack.Screen

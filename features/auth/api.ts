@@ -133,6 +133,38 @@ export async function login(email: string, password: string) {
   return auth.user;
 }
 
+export async function forgotPassword(email: string) {
+  const { data } = await api.post<{ message: string }>(
+    "/api/v1/forgot-password",
+    {
+      email,
+    },
+  );
+
+  return data;
+}
+
+export type ResetPasswordInput = {
+  email: string;
+  token: string;
+  password: string;
+  passwordConfirmation: string;
+};
+
+export async function resetPassword(input: ResetPasswordInput) {
+  const { data } = await api.post<{ message: string }>(
+    "/api/v1/reset-password",
+    {
+      email: input.email,
+      token: input.token,
+      password: input.password,
+      password_confirmation: input.passwordConfirmation,
+    },
+  );
+
+  return data;
+}
+
 export async function register(input: RegisterInput) {
   const device_name = await getDeviceName();
   const { data } = await api.post<AuthResponseEnvelope>("/api/v1/register", {

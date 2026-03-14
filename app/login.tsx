@@ -8,18 +8,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
-import {
-  Field,
-  PrimaryButton,
-  SecondaryButton,
-  SurfaceCard,
-} from "@shared/ui/primitives";
+import { Field, PrimaryButton, SurfaceCard } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
 export default function LoginScreen() {
@@ -28,6 +24,7 @@ export default function LoginScreen() {
   const { user, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,8 +63,8 @@ export default function LoginScreen() {
           <Text style={styles.eyebrow}>PaydayPlanners</Text>
           <Text style={styles.title}>Plan every paycheck before it lands.</Text>
           <Text style={styles.subtitle}>
-            See the true remaining balance on each paycheck after bills, savings
-            goals, and one-time expenses are assigned.
+            See the true remaining balance after bills and goals are assigned,
+            before you spend.
           </Text>
 
           <View style={styles.heroPoints}>
@@ -85,46 +82,16 @@ export default function LoginScreen() {
                 name="receipt-text-check-outline"
                 size={18}
               />
-              <Text style={styles.heroPointText}>
-                Bills mapped automatically
-              </Text>
-            </View>
-            <View style={styles.heroPoint}>
-              <MaterialCommunityIcons
-                color={theme.colors.accent}
-                name="bullseye-arrow"
-                size={18}
-              />
-              <Text style={styles.heroPointText}>
-                Savings treated as real commitments
-              </Text>
+              <Text style={styles.heroPointText}>Bills and goals mapped</Text>
             </View>
           </View>
         </SurfaceCard>
 
         <SurfaceCard style={styles.formCard}>
-          <View style={styles.modeSwitch}>
-            <Pressable
-              onPress={() => {
-                router.replace("/login");
-              }}
-              style={[styles.modeChip, styles.modeChipActive]}
-            >
-              <Text style={[styles.modeChipLabel, styles.modeChipLabelActive]}>
-                I have an account
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                router.replace("/register");
-              }}
-              style={styles.modeChip}
-            >
-              <Text style={styles.modeChipLabel}>I am new here</Text>
-            </Pressable>
-          </View>
-
           <Text style={styles.formTitle}>Sign in</Text>
+          <Text style={styles.formSubtitle}>
+            Pick up where your last forecast left off.
+          </Text>
 
           <Field
             autoCapitalize="none"
@@ -137,21 +104,57 @@ export default function LoginScreen() {
             returnKeyType="next"
             value={email}
           />
-          <Field
-            autoCapitalize="none"
-            autoComplete="password"
-            autoCorrect={false}
-            label="Password"
-            onChangeText={setPassword}
-            onSubmitEditing={() => {
-              void submit();
+          <View style={styles.passwordGroup}>
+            <Text style={styles.passwordLabel}>Password</Text>
+            <View style={styles.passwordInputWrap}>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="password"
+                autoCorrect={false}
+                onChangeText={setPassword}
+                onSubmitEditing={() => {
+                  void submit();
+                }}
+                placeholder="Password"
+                placeholderTextColor={theme.colors.muted}
+                returnKeyType="go"
+                secureTextEntry={!passwordVisible}
+                style={styles.passwordInput}
+                textContentType="password"
+                value={password}
+              />
+              <Pressable
+                accessibilityHint="Shows or hides your password."
+                accessibilityLabel={
+                  passwordVisible ? "Hide password" : "Show password"
+                }
+                hitSlop={10}
+                onPress={() => {
+                  setPasswordVisible((current) => !current);
+                }}
+                style={({ pressed }) => [
+                  styles.passwordToggle,
+                  pressed ? styles.passwordTogglePressed : null,
+                ]}
+              >
+                <Text style={styles.passwordToggleLabel}>
+                  {passwordVisible ? "Hide" : "Show"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+          <Pressable
+            disabled={loading}
+            onPress={() => {
+              router.push("/forgot-password");
             }}
-            placeholder="Password"
-            returnKeyType="go"
-            secureTextEntry
-            textContentType="password"
-            value={password}
-          />
+            style={({ pressed }) => [
+              styles.forgotPasswordLink,
+              pressed && !loading ? styles.inlineLinkPressed : null,
+            ]}
+          >
+            <Text style={styles.forgotPasswordLabel}>Forgot password?</Text>
+          </Pressable>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -163,13 +166,18 @@ export default function LoginScreen() {
               void submit();
             }}
           />
-          <SecondaryButton
+          <Pressable
             disabled={loading}
-            label="New here? Create account"
             onPress={() => {
               router.push("/register");
             }}
-          />
+            style={({ pressed }) => [
+              styles.inlineLink,
+              pressed && !loading ? styles.inlineLinkPressed : null,
+            ]}
+          >
+            <Text style={styles.inlineLinkLabel}>New here? Create account</Text>
+          </Pressable>
         </SurfaceCard>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -187,7 +195,7 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   heroCard: {
-    gap: 16,
+    gap: 14,
   },
   eyebrow: {
     color: theme.colors.accent,
@@ -206,7 +214,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   heroPoints: {
-    gap: 10,
+    gap: 8,
   },
   heroPoint: {
     flexDirection: "row",
@@ -221,36 +229,73 @@ const styles = StyleSheet.create({
   formCard: {
     gap: 16,
   },
-  modeSwitch: {
-    flexDirection: "row",
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 4,
-    gap: 4,
-  },
-  modeChip: {
-    flex: 1,
-    borderRadius: theme.radius.pill,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modeChipActive: {
-    backgroundColor: theme.colors.ink,
-  },
-  modeChipLabel: {
-    color: theme.colors.muted,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  modeChipLabelActive: {
-    color: theme.colors.white,
-  },
   formTitle: {
     color: theme.colors.ink,
     ...theme.typography.cardTitle,
+  },
+  formSubtitle: {
+    color: theme.colors.muted,
+    ...theme.typography.body,
+  },
+  passwordGroup: {
+    gap: 6,
+  },
+  passwordLabel: {
+    color: theme.colors.ink,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  passwordInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    paddingLeft: 16,
+    paddingRight: 12,
+    minHeight: 56,
+  },
+  passwordInput: {
+    flex: 1,
+    color: theme.colors.ink,
+    fontSize: 16,
+    paddingVertical: 14,
+  },
+  passwordToggle: {
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  passwordTogglePressed: {
+    opacity: 0.8,
+  },
+  passwordToggleLabel: {
+    color: theme.colors.ink,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  inlineLink: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+  },
+  inlineLinkPressed: {
+    opacity: 0.8,
+  },
+  inlineLinkLabel: {
+    color: theme.colors.ink,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  forgotPasswordLink: {
+    alignSelf: "flex-end",
+  },
+  forgotPasswordLabel: {
+    color: theme.colors.primaryStrong,
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

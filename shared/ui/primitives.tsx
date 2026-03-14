@@ -25,6 +25,7 @@ type AppScreenProps = {
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
   refreshControl?: ReactElement<RefreshControlProps>;
+  topInset?: boolean;
 };
 
 type ScreenHeaderProps = {
@@ -119,9 +120,10 @@ export function AppScreen({
   children,
   contentContainerStyle,
   refreshControl,
+  topInset = true,
 }: AppScreenProps) {
   return (
-    <SafeAreaView edges={["top"]} style={styles.safeArea}>
+    <SafeAreaView edges={topInset ? ["top"] : []} style={styles.safeArea}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <View style={styles.topInkOrb} />
         <View style={styles.topTealOrb} />

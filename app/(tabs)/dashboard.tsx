@@ -669,7 +669,7 @@ export default function DashboardScreen() {
                     />
                   }
                   subtitle="These items still do not have a paycheck covering them."
-                  title="Uncovered bills"
+                  title="Needs funding"
                 />
                 <BillList
                   emptyBody="Everything visible in this current planning window has funding assigned."
@@ -722,18 +722,10 @@ export default function DashboardScreen() {
                 <SectionTitle
                   action={
                     <SecondaryButton
-                      icon={
-                        canCreateSavingsGoal
-                          ? "bullseye-arrow"
-                          : "crown-outline"
-                      }
-                      label={canCreateSavingsGoal ? "Add goal" : "Unlock Pro"}
+                      icon="bullseye-arrow"
+                      label="Open goals"
                       onPress={() => {
-                        router.push(
-                          canCreateSavingsGoal
-                            ? "/savings-goals/new"
-                            : "/billing",
-                        );
+                        router.push("/goals");
                       }}
                     />
                   }
@@ -774,14 +766,12 @@ export default function DashboardScreen() {
                   </View>
                 </View>
                 <PrimaryButton
-                  icon={canCreateSavingsGoal ? "plus" : "crown-outline"}
-                  label={
-                    canCreateSavingsGoal ? "Create savings goal" : "Unlock Pro"
+                  icon={
+                    canCreateSavingsGoal ? "bullseye-arrow" : "crown-outline"
                   }
+                  label={canCreateSavingsGoal ? "Open goals" : "Unlock Pro"}
                   onPress={() => {
-                    router.push(
-                      canCreateSavingsGoal ? "/savings-goals/new" : "/billing",
-                    );
+                    router.push(canCreateSavingsGoal ? "/goals" : "/billing");
                   }}
                 />
               </SurfaceCard>

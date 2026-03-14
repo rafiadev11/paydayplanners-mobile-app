@@ -1,32 +1,35 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
-import { RefreshControl, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { useAuth } from "@features/auth/auth-context";
 import { BillingBanner } from "@features/billing/components";
 import {
-  fetchBillCategories,
   fetchBillOccurrences,
   fetchBills,
-  fetchSavingsGoals,
   type Bill,
-  type BillCategory,
   type BillOccurrence,
-  type SavingsGoal,
 } from "@features/planning/api";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   formatCurrency,
   formatDateWithYear,
   formatFrequency,
+  formatInteger,
 } from "@shared/lib/format";
 import {
   AppScreen,
   EmptyState,
   ErrorState,
   LoadingState,
-  MetricTile,
   PrimaryButton,
   Row,
   ScreenHeader,
@@ -35,44 +38,238 @@ import {
   StatusBadge,
   SurfaceCard,
 } from "@shared/ui/primitives";
-import { theme } from "@shared/ui/theme";
+import { theme, withAlpha } from "@shared/ui/theme";
 
-function occurrenceTone(status: string) {
-  switch (status) {
-    case "paid":
-      return "success" as const;
-    case "overdue":
-      return "danger" as const;
-    case "skipped":
-      return "warning" as const;
-    default:
-      return "neutral" as const;
-  }
+type BillFilter = "all" | "dueSoon" | "recurring" | "oneTime" | "paused";
+
+function outstandingOccurrences(occurrences: BillOccurrence[]) {
+  return occurrences.filter(
+    (occurrence) =>
+      occurrence.status !== "paid" && occurrence.status !== "skipped",
+  );
 }
 
-function activeGoals(goals: SavingsGoal[]) {
-  return goals.filter((goal) => goal.is_active);
+function daysUntil(value: string) {
+  const today = new Date();
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const target = new Date(`${value}T00:00:00`);
+
+  return Math.round((target.getTime() - start.getTime()) / 86_400_000);
 }
 
-function goalSubtitle(goal: SavingsGoal) {
-  if (goal.target_date) {
-    return `Target ${formatDateWithYear(goal.target_date)}`;
+function monthlyRecurringLoad(bills: Bill[]) {
+  return bills
+    .filter((bill) => bill.is_active && bill.frequency === "monthly")
+    .reduce((total, bill) => total + Number(bill.amount), 0);
+}
+
+function buildNextOccurrenceMap(occurrences: BillOccurrence[]) {
+  const nextByBill = new Map<string, BillOccurrence>();
+
+  for (const occurrence of occurrences) {
+    const billId = String(occurrence.bill?.id ?? occurrence.bill_id ?? "");
+
+    if (billId !== "" && !nextByBill.has(billId)) {
+      nextByBill.set(billId, occurrence);
+    }
   }
 
-  if (goal.contribution_amount) {
-    return `Open-ended · ${formatCurrency(goal.contribution_amount)} per paycheck`;
+  return nextByBill;
+}
+
+function occurrenceState(occurrence: BillOccurrence) {
+  if (occurrence.status === "overdue") {
+    return {
+      label: "overdue",
+      tone: "danger" as const,
+    };
   }
 
-  return "Open-ended goal";
+  if (Number(occurrence.unfunded_amount ?? 0) > 0) {
+    return {
+      label: "needs funding",
+      tone: "warning" as const,
+    };
+  }
+
+  return {
+    label: "upcoming",
+    tone: "primary" as const,
+  };
+}
+
+function FilterChip({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.filterChip,
+        selected ? styles.filterChipSelected : null,
+        pressed ? styles.filterChipPressed : null,
+      ]}
+    >
+      <Text
+        style={[
+          styles.filterChipLabel,
+          selected ? styles.filterChipLabelSelected : null,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function BillsSummaryCard({
+  nextDue,
+  dueIn14Days,
+  uncoveredCount,
+  monthlyLoad,
+  canCreateBill,
+  onAddBill,
+  onOpenBilling,
+}: {
+  nextDue: BillOccurrence | null;
+  dueIn14Days: number;
+  uncoveredCount: number;
+  monthlyLoad: number;
+  canCreateBill: boolean;
+  onAddBill: () => void;
+  onOpenBilling: () => void;
+}) {
+  return (
+    <SurfaceCard tone="dark" style={styles.summaryCard}>
+      <View style={styles.summaryHeader}>
+        <View style={styles.summaryHeaderCopy}>
+          <Text style={styles.summaryEyebrow}>Due next</Text>
+          <Text style={styles.summaryTitle}>
+            {nextDue?.bill?.name ?? "No bill due right now"}
+          </Text>
+          <Text style={styles.summaryBody}>
+            {nextDue
+              ? `Due ${formatDateWithYear(nextDue.due_date)}`
+              : "Everything in the current window is covered and on track."}
+          </Text>
+        </View>
+        <Text style={styles.summaryAmount}>
+          {formatCurrency(nextDue?.effective_amount ?? nextDue?.amount ?? 0)}
+        </Text>
+      </View>
+
+      <View style={styles.summaryStats}>
+        <View style={styles.summaryStat}>
+          <Text style={styles.summaryStatLabel}>Due in 14 days</Text>
+          <Text style={styles.summaryStatValue}>
+            {formatInteger(dueIn14Days)}
+          </Text>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryStat}>
+          <Text style={styles.summaryStatLabel}>Needs funding</Text>
+          <Text style={styles.summaryStatValue}>
+            {formatInteger(uncoveredCount)}
+          </Text>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryStat}>
+          <Text style={styles.summaryStatLabel}>Monthly recurring</Text>
+          <Text style={styles.summaryStatValue}>
+            {formatCurrency(monthlyLoad)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.summaryActions}>
+        <PrimaryButton
+          icon={canCreateBill ? "receipt-text-plus-outline" : "crown-outline"}
+          label={canCreateBill ? "Add bill" : "Unlock Pro"}
+          onPress={canCreateBill ? onAddBill : onOpenBilling}
+        />
+      </View>
+    </SurfaceCard>
+  );
+}
+
+function BillCard({
+  bill,
+  nextOccurrence,
+  onEdit,
+}: {
+  bill: Bill;
+  nextOccurrence: BillOccurrence | null;
+  onEdit: () => void;
+}) {
+  return (
+    <SurfaceCard style={styles.billCard}>
+      <View style={styles.billHeader}>
+        <View style={styles.billHeaderCopy}>
+          <View style={styles.billTitleRow}>
+            <Text style={styles.billTitle}>{bill.name}</Text>
+            <StatusBadge
+              label={bill.is_active ? "active" : "paused"}
+              tone={bill.is_active ? "success" : "warning"}
+            />
+          </View>
+          <Text style={styles.billSubtitle}>
+            {formatFrequency(bill.frequency)}
+            {bill.is_subscription ? " subscription" : ""}
+          </Text>
+        </View>
+        <Text style={styles.billAmount}>{formatCurrency(bill.amount)}</Text>
+      </View>
+
+      <View style={styles.billMetaGrid}>
+        <View style={styles.billMetaTile}>
+          <Text style={styles.billMetaLabel}>Next due</Text>
+          <Text style={styles.billMetaValue}>
+            {nextOccurrence
+              ? formatDateWithYear(nextOccurrence.due_date)
+              : "No due date in window"}
+          </Text>
+        </View>
+        <View style={styles.billMetaTile}>
+          <Text style={styles.billMetaLabel}>Cadence</Text>
+          <Text style={styles.billMetaValue}>
+            {bill.frequency === "monthly"
+              ? `Day ${bill.due_day ?? "--"}`
+              : formatFrequency(bill.frequency)}
+          </Text>
+        </View>
+      </View>
+
+      {bill.bill_category ? (
+        <View style={styles.categoryRow}>
+          <StatusBadge label={bill.bill_category.name} tone="primary" />
+        </View>
+      ) : null}
+
+      <SecondaryButton
+        icon="pencil-outline"
+        label="Edit bill"
+        onPress={onEdit}
+      />
+    </SurfaceCard>
+  );
 }
 
 export default function BillsScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [bills, setBills] = useState<Bill[]>([]);
-  const [categories, setCategories] = useState<BillCategory[]>([]);
   const [occurrences, setOccurrences] = useState<BillOccurrence[]>([]);
-  const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState<BillFilter>("all");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,18 +280,13 @@ export default function BillsScreen() {
       else setLoading(true);
 
       try {
-        const [nextBills, nextCategories, nextOccurrences, nextGoals] =
-          await Promise.all([
-            fetchBills(),
-            fetchBillCategories(),
-            fetchBillOccurrences(user?.billing?.has_pro_access ? 365 : 90),
-            fetchSavingsGoals(),
-          ]);
+        const [nextBills, nextOccurrences] = await Promise.all([
+          fetchBills(),
+          fetchBillOccurrences(user?.billing?.has_pro_access ? 365 : 90),
+        ]);
 
         setBills(nextBills);
-        setCategories(nextCategories);
         setOccurrences(nextOccurrences);
-        setGoals(nextGoals);
         setError(null);
       } catch (nextError) {
         setError(getApiErrorMessage(nextError));
@@ -112,11 +304,45 @@ export default function BillsScreen() {
     }, [load]),
   );
 
-  const dueSoon = occurrences.slice(0, 6);
+  useEffect(() => {
+    setSelectedFilter("all");
+  }, [bills.length]);
+
+  const outstanding = outstandingOccurrences(occurrences);
+  const nextOccurrenceMap = buildNextOccurrenceMap(outstanding);
+  const nextDue = outstanding[0] ?? null;
+  const dueSoon = outstanding.filter((occurrence) => {
+    const days = daysUntil(occurrence.due_date);
+
+    return days >= 0 && days <= 30;
+  });
+  const dueIn14Days = outstanding.filter((occurrence) => {
+    const days = daysUntil(occurrence.due_date);
+
+    return days >= 0 && days <= 14;
+  }).length;
+  const needsAttention = outstanding.filter(
+    (occurrence) =>
+      occurrence.status === "overdue" ||
+      Number(occurrence.unfunded_amount ?? 0) > 0,
+  );
   const canCreateBill =
     Boolean(user?.billing?.has_pro_access) || bills.length < 12;
-  const canCreateSavingsGoal =
-    Boolean(user?.billing?.has_pro_access) || goals.length < 1;
+
+  const filteredBills =
+    selectedFilter === "all"
+      ? bills
+      : selectedFilter === "dueSoon"
+        ? bills.filter((bill) => {
+            const occurrence = nextOccurrenceMap.get(String(bill.id));
+
+            return occurrence ? daysUntil(occurrence.due_date) <= 30 : false;
+          })
+        : selectedFilter === "recurring"
+          ? bills.filter((bill) => bill.frequency !== "once")
+          : selectedFilter === "oneTime"
+            ? bills.filter((bill) => bill.frequency === "once")
+            : bills.filter((bill) => !bill.is_active);
 
   return (
     <AppScreen
@@ -132,12 +358,12 @@ export default function BillsScreen() {
     >
       <ScreenHeader
         eyebrow="Commitments"
-        subtitle="Recurring bills, one-time expenses, categories, and savings goals all in the same operating view."
+        subtitle="See what is due next, what still needs coverage, and the bill rules driving your plan."
         title="Bills"
       />
 
       {loading ? (
-        <LoadingState label="Loading bills, due dates, categories, and savings goals." />
+        <LoadingState label="Loading bills and upcoming due dates." />
       ) : error ? (
         <ErrorState
           body={error}
@@ -148,208 +374,179 @@ export default function BillsScreen() {
         />
       ) : (
         <>
-          {bills.length > 0 || goals.length > 0 ? (
+          {bills.length > 0 ? (
             <BillingBanner billing={user?.billing} compact />
           ) : null}
 
-          <SurfaceCard tone="accent">
-            <SectionTitle
-              action={
-                <PrimaryButton
-                  icon={
-                    canCreateBill
-                      ? "receipt-text-plus-outline"
-                      : "crown-outline"
-                  }
-                  label={canCreateBill ? "Add bill" : "Unlock Pro"}
-                  onPress={() => {
-                    router.push(canCreateBill ? "/bills/new" : "/billing");
-                  }}
-                />
-              }
-              subtitle="Use this area for recurring bills, subscriptions, and one-time expenses."
-              title="Obligation overview"
-            />
-            <View style={styles.metricGrid}>
-              <MetricTile
-                label="Active bills"
-                tone="dark"
-                value={String(bills.filter((bill) => bill.is_active).length)}
-              />
-              <MetricTile
-                label="Upcoming due dates"
-                tone="warning"
-                value={String(dueSoon.length)}
-              />
-              <MetricTile
-                label="Goals"
-                tone="success"
-                value={String(activeGoals(goals).length)}
-              />
-            </View>
-          </SurfaceCard>
+          <BillsSummaryCard
+            canCreateBill={canCreateBill}
+            dueIn14Days={dueIn14Days}
+            monthlyLoad={monthlyRecurringLoad(bills)}
+            nextDue={nextDue}
+            onAddBill={() => {
+              router.push("/bills/new");
+            }}
+            onOpenBilling={() => {
+              router.push("/billing");
+            }}
+            uncoveredCount={
+              needsAttention.filter(
+                (occurrence) => Number(occurrence.unfunded_amount ?? 0) > 0,
+              ).length
+            }
+          />
 
-          {categories.length ? (
+          {needsAttention.length ? (
+            <>
+              <SectionTitle
+                subtitle="These items are overdue or not fully backed by income yet."
+                title="Needs attention"
+              />
+              <SurfaceCard>
+                {needsAttention.slice(0, 5).map((occurrence) => {
+                  const state = occurrenceState(occurrence);
+
+                  return (
+                    <Row
+                      key={String(occurrence.id)}
+                      badge={
+                        <StatusBadge label={state.label} tone={state.tone} />
+                      }
+                      subtitle={`Due ${formatDateWithYear(occurrence.due_date)}`}
+                      title={occurrence.bill?.name ?? "Bill occurrence"}
+                      value={formatCurrency(
+                        occurrence.unfunded_amount ?? occurrence.amount,
+                      )}
+                      valueTone="danger"
+                    />
+                  );
+                })}
+              </SurfaceCard>
+            </>
+          ) : (
             <SurfaceCard tone="accent">
               <SectionTitle
-                subtitle="Categories help the app explain where each paycheck is being consumed."
-                title="Categories"
+                subtitle="All current bills in the planning window are covered and on time."
+                title="Nothing urgent"
               />
-              <View style={styles.categoryWrap}>
-                {categories.map((category) => (
-                  <StatusBadge
-                    key={String(category.id)}
-                    label={category.name}
-                    tone={category.is_default ? "primary" : "neutral"}
-                  />
-                ))}
-              </View>
             </SurfaceCard>
-          ) : null}
+          )}
 
           <SectionTitle
-            subtitle="Recurring obligations and one-time expenses from your backend."
-            title="Bill library"
+            subtitle="The next upcoming due dates in the visible planning window."
+            title="Due soon"
           />
-          {bills.length ? (
-            bills.map((bill) => (
-              <SurfaceCard key={String(bill.id)}>
-                <Row
-                  badge={
-                    bill.bill_category ? (
-                      <StatusBadge
-                        label={bill.bill_category.name}
-                        tone="primary"
-                      />
-                    ) : undefined
-                  }
-                  subtitle={`${formatFrequency(bill.frequency)}${bill.is_subscription ? " subscription" : ""}`}
-                  title={bill.name}
-                  value={formatCurrency(bill.amount)}
-                />
-                <Row
-                  badge={
-                    <StatusBadge
-                      label={bill.is_active ? "active" : "paused"}
-                      tone={bill.is_active ? "success" : "warning"}
-                    />
-                  }
-                  subtitle={
-                    bill.frequency === "monthly"
-                      ? `Due on day ${bill.due_day ?? "--"}`
-                      : `Starts ${formatDateWithYear(bill.start_date)}`
-                  }
-                  title="Schedule"
-                />
-                <SecondaryButton
-                  icon="pencil-outline"
-                  label="Edit bill"
-                  onPress={() => {
-                    router.push(`/bills/${bill.id}`);
-                  }}
-                />
-              </SurfaceCard>
-            ))
+          {dueSoon.length ? (
+            <SurfaceCard>
+              {dueSoon.slice(0, 6).map((occurrence) => {
+                const state = occurrenceState(occurrence);
+
+                return (
+                  <Row
+                    key={String(occurrence.id)}
+                    badge={
+                      <StatusBadge label={state.label} tone={state.tone} />
+                    }
+                    subtitle={`Due ${formatDateWithYear(occurrence.due_date)}`}
+                    title={occurrence.bill?.name ?? "Bill occurrence"}
+                    value={formatCurrency(
+                      occurrence.effective_amount ?? occurrence.amount,
+                    )}
+                    valueTone={state.tone === "danger" ? "danger" : "default"}
+                  />
+                );
+              })}
+            </SurfaceCard>
           ) : (
             <EmptyState
-              body="Create your first recurring or one-time bill to see how each paycheck gets reduced."
-              title="No bills yet"
+              body="Once bills exist in the planning window, upcoming due dates will show here."
+              title="Nothing due soon"
             />
           )}
 
-          <SurfaceCard>
-            <SectionTitle
-              action={
-                <SecondaryButton
-                  icon={
-                    canCreateSavingsGoal ? "bullseye-arrow" : "crown-outline"
-                  }
-                  label={canCreateSavingsGoal ? "Add goal" : "Unlock Pro"}
-                  onPress={() => {
-                    router.push(
-                      canCreateSavingsGoal ? "/savings-goals/new" : "/billing",
-                    );
-                  }}
-                />
-              }
-              subtitle="Next due items in the active planning window."
-              title="Due soon"
-            />
-            {dueSoon.length ? (
-              dueSoon.map((occurrence) => (
-                <Row
-                  key={String(occurrence.id)}
-                  badge={
-                    <StatusBadge
-                      label={occurrence.status}
-                      tone={occurrenceTone(occurrence.status)}
-                    />
-                  }
-                  subtitle={`Due ${formatDateWithYear(occurrence.due_date)}`}
-                  title={occurrence.bill?.name ?? "Bill occurrence"}
-                  value={formatCurrency(
-                    occurrence.effective_amount ?? occurrence.amount,
-                  )}
-                  valueTone={
-                    occurrence.status === "overdue" ? "danger" : "default"
-                  }
-                />
-              ))
-            ) : (
-              <EmptyState
-                body="Once bills exist in the planning window, upcoming due dates will show here."
-                title="Nothing due soon"
+          <SectionTitle
+            action={
+              <SecondaryButton
+                icon={
+                  canCreateBill ? "receipt-text-plus-outline" : "crown-outline"
+                }
+                label={canCreateBill ? "Add bill" : "Unlock Pro"}
+                onPress={() => {
+                  router.push(canCreateBill ? "/bills/new" : "/billing");
+                }}
               />
-            )}
-          </SurfaceCard>
+            }
+            subtitle="Filter your bill rules by urgency and type, then jump into edits quickly."
+            title="Your bills"
+          />
 
-          <SurfaceCard tone="warning">
-            <SectionTitle
-              subtitle="Savings goals are first-class cashflow commitments, not an afterthought."
-              title="Savings goals"
+          <ScrollView
+            contentContainerStyle={styles.filterRow}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            <FilterChip
+              label="All"
+              onPress={() => {
+                setSelectedFilter("all");
+              }}
+              selected={selectedFilter === "all"}
             />
-            {goals.length ? (
-              goals.map((goal) => (
-                <SurfaceCard key={String(goal.id)} tone="light">
-                  <Row
-                    badge={
-                      <StatusBadge label={`P${goal.priority}`} tone="accent" />
-                    }
-                    subtitle={goalSubtitle(goal)}
-                    title={goal.name}
-                    value={formatCurrency(goal.remaining_target)}
-                  />
-                  <SecondaryButton
-                    icon="pencil-outline"
-                    label="Edit goal"
-                    onPress={() => {
-                      router.push(`/savings-goals/${goal.id}`);
-                    }}
-                  />
-                </SurfaceCard>
-              ))
-            ) : (
-              <View style={styles.emptyGoalWrap}>
-                <Text style={styles.emptyGoalTitle}>No savings goals yet</Text>
-                <Text style={styles.emptyGoalBody}>
-                  Add sinking funds for annual bills, travel, or larger
-                  purchases so they show up alongside bills in the paycheck
-                  plan.
-                </Text>
-                <PrimaryButton
-                  icon={canCreateSavingsGoal ? "plus" : "crown-outline"}
-                  label={
-                    canCreateSavingsGoal ? "Create savings goal" : "Unlock Pro"
+            <FilterChip
+              label="Due soon"
+              onPress={() => {
+                setSelectedFilter("dueSoon");
+              }}
+              selected={selectedFilter === "dueSoon"}
+            />
+            <FilterChip
+              label="Recurring"
+              onPress={() => {
+                setSelectedFilter("recurring");
+              }}
+              selected={selectedFilter === "recurring"}
+            />
+            <FilterChip
+              label="One-time"
+              onPress={() => {
+                setSelectedFilter("oneTime");
+              }}
+              selected={selectedFilter === "oneTime"}
+            />
+            <FilterChip
+              label="Paused"
+              onPress={() => {
+                setSelectedFilter("paused");
+              }}
+              selected={selectedFilter === "paused"}
+            />
+          </ScrollView>
+
+          {filteredBills.length ? (
+            <View style={styles.billStack}>
+              {filteredBills.map((bill) => (
+                <BillCard
+                  bill={bill}
+                  key={String(bill.id)}
+                  nextOccurrence={
+                    nextOccurrenceMap.get(String(bill.id)) ?? null
                   }
-                  onPress={() => {
-                    router.push(
-                      canCreateSavingsGoal ? "/savings-goals/new" : "/billing",
-                    );
+                  onEdit={() => {
+                    router.push(`/bills/${bill.id}`);
                   }}
                 />
-              </View>
-            )}
-          </SurfaceCard>
+              ))}
+            </View>
+          ) : (
+            <EmptyState
+              body={
+                selectedFilter === "all"
+                  ? "Create your first recurring or one-time bill to see how each paycheck gets reduced."
+                  : "No bills match this filter right now."
+              }
+              title={selectedFilter === "all" ? "No bills yet" : "Nothing here"}
+            />
+          )}
         </>
       )}
     </AppScreen>
@@ -357,25 +554,161 @@ export default function BillsScreen() {
 }
 
 const styles = StyleSheet.create({
-  metricGrid: {
+  summaryCard: {
+    gap: theme.spacing.lg,
+  },
+  summaryHeader: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     gap: theme.spacing.md,
   },
-  categoryWrap: {
+  summaryHeaderCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  summaryEyebrow: {
+    color: withAlpha(theme.colors.white, 0.72),
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  summaryTitle: {
+    color: theme.colors.white,
+    ...theme.typography.title,
+  },
+  summaryBody: {
+    color: withAlpha(theme.colors.white, 0.72),
+    ...theme.typography.body,
+  },
+  summaryAmount: {
+    color: theme.colors.white,
+    ...theme.typography.metricCompact,
+  },
+  summaryStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    backgroundColor: withAlpha(theme.colors.white, 0.08),
+    padding: theme.spacing.md,
+  },
+  summaryStat: {
+    flex: 1,
+    gap: 4,
+  },
+  summaryStatLabel: {
+    color: withAlpha(theme.colors.white, 0.62),
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  summaryStatValue: {
+    color: theme.colors.white,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  summaryDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: withAlpha(theme.colors.white, 0.12),
+  },
+  summaryActions: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: theme.spacing.sm,
   },
-  emptyGoalWrap: {
+  filterRow: {
+    gap: theme.spacing.sm,
+    paddingRight: theme.spacing.sm,
+  },
+  filterChip: {
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: withAlpha(theme.colors.white, 0.82),
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  filterChipSelected: {
+    borderColor: withAlpha(theme.colors.ink, 0.08),
+    backgroundColor: theme.colors.ink,
+  },
+  filterChipPressed: {
+    opacity: 0.86,
+  },
+  filterChipLabel: {
+    color: theme.colors.ink,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  filterChipLabelSelected: {
+    color: theme.colors.white,
+  },
+  billStack: {
     gap: theme.spacing.md,
   },
-  emptyGoalTitle: {
-    color: theme.colors.ink,
+  billCard: {
+    gap: theme.spacing.lg,
+  },
+  billHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: theme.spacing.md,
+  },
+  billHeaderCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  billTitleRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+  billTitle: {
+    color: theme.colors.text,
     ...theme.typography.cardTitle,
   },
-  emptyGoalBody: {
+  billSubtitle: {
     color: theme.colors.muted,
     ...theme.typography.body,
+  },
+  billAmount: {
+    color: theme.colors.ink,
+    ...theme.typography.metricCompact,
+  },
+  billMetaGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.md,
+  },
+  billMetaTile: {
+    flex: 1,
+    minWidth: 140,
+    gap: 4,
+    borderRadius: theme.radius.md,
+    backgroundColor: withAlpha(theme.colors.primarySoft, 0.44),
+    padding: theme.spacing.md,
+  },
+  billMetaLabel: {
+    color: theme.colors.muted,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  billMetaValue: {
+    color: theme.colors.ink,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  categoryRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
   },
 });
