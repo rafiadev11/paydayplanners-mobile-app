@@ -8,18 +8,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
-import {
-  Field,
-  PrimaryButton,
-  SecondaryButton,
-  SurfaceCard,
-} from "@shared/ui/primitives";
+import { Field, PrimaryButton, SurfaceCard } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
 export default function RegisterScreen() {
@@ -30,6 +26,9 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [passwordConfirmationVisible, setPasswordConfirmationVisible] =
+    useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,8 +72,8 @@ export default function RegisterScreen() {
           <Text style={styles.eyebrow}>PaydayPlanners</Text>
           <Text style={styles.title}>Create your cashflow command center.</Text>
           <Text style={styles.subtitle}>
-            Add income, bills, and savings goals once, then let the planner show
-            how every paycheck gets reduced before you spend it.
+            Start with one paycheck and one bill, then let the planner show what
+            stays free before you spend.
           </Text>
 
           <View style={styles.heroPoints}>
@@ -84,7 +83,7 @@ export default function RegisterScreen() {
                 name="timeline-text-outline"
                 size={18}
               />
-              <Text style={styles.heroPointText}>90-day forecast view</Text>
+              <Text style={styles.heroPointText}>Plan by paycheck</Text>
             </View>
             <View style={styles.heroPoint}>
               <MaterialCommunityIcons
@@ -92,46 +91,16 @@ export default function RegisterScreen() {
                 name="calendar-clock-outline"
                 size={18}
               />
-              <Text style={styles.heroPointText}>
-                Recurring and one-time support
-              </Text>
-            </View>
-            <View style={styles.heroPoint}>
-              <MaterialCommunityIcons
-                color={theme.colors.accent}
-                name="shield-check-outline"
-                size={18}
-              />
-              <Text style={styles.heroPointText}>
-                Secure token-based sessions
-              </Text>
+              <Text style={styles.heroPointText}>Bills and goals mapped</Text>
             </View>
           </View>
         </SurfaceCard>
 
         <SurfaceCard style={styles.formCard}>
-          <View style={styles.modeSwitch}>
-            <Pressable
-              onPress={() => {
-                router.replace("/login");
-              }}
-              style={styles.modeChip}
-            >
-              <Text style={styles.modeChipLabel}>I have an account</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                router.replace("/register");
-              }}
-              style={[styles.modeChip, styles.modeChipActive]}
-            >
-              <Text style={[styles.modeChipLabel, styles.modeChipLabelActive]}>
-                I am new here
-              </Text>
-            </Pressable>
-          </View>
-
           <Text style={styles.formTitle}>Create account</Text>
+          <Text style={styles.formSubtitle}>
+            Build your first working forecast in a few minutes.
+          </Text>
 
           <Field
             autoCapitalize="words"
@@ -154,33 +123,83 @@ export default function RegisterScreen() {
             textContentType="emailAddress"
             value={email}
           />
-          <Field
-            autoCapitalize="none"
-            autoComplete="password-new"
-            autoCorrect={false}
-            label="Password"
-            onChangeText={setPassword}
-            placeholder="Password"
-            returnKeyType="next"
-            secureTextEntry
-            textContentType="newPassword"
-            value={password}
-          />
-          <Field
-            autoCapitalize="none"
-            autoComplete="password-new"
-            autoCorrect={false}
-            label="Confirm password"
-            onChangeText={setPasswordConfirmation}
-            onSubmitEditing={() => {
-              void submit();
-            }}
-            placeholder="Confirm password"
-            returnKeyType="go"
-            secureTextEntry
-            textContentType="password"
-            value={passwordConfirmation}
-          />
+          <View style={styles.passwordGroup}>
+            <Text style={styles.passwordLabel}>Password</Text>
+            <View style={styles.passwordInputWrap}>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="password-new"
+                autoCorrect={false}
+                onChangeText={setPassword}
+                placeholder="Password"
+                placeholderTextColor={theme.colors.muted}
+                returnKeyType="next"
+                secureTextEntry={!passwordVisible}
+                style={styles.passwordInput}
+                textContentType="newPassword"
+                value={password}
+              />
+              <Pressable
+                accessibilityHint="Shows or hides your password."
+                accessibilityLabel={
+                  passwordVisible ? "Hide password" : "Show password"
+                }
+                hitSlop={10}
+                onPress={() => {
+                  setPasswordVisible((current) => !current);
+                }}
+                style={({ pressed }) => [
+                  styles.passwordToggle,
+                  pressed ? styles.passwordTogglePressed : null,
+                ]}
+              >
+                <Text style={styles.passwordToggleLabel}>
+                  {passwordVisible ? "Hide" : "Show"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+          <View style={styles.passwordGroup}>
+            <Text style={styles.passwordLabel}>Confirm password</Text>
+            <View style={styles.passwordInputWrap}>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="password-new"
+                autoCorrect={false}
+                onChangeText={setPasswordConfirmation}
+                onSubmitEditing={() => {
+                  void submit();
+                }}
+                placeholder="Confirm password"
+                placeholderTextColor={theme.colors.muted}
+                returnKeyType="go"
+                secureTextEntry={!passwordConfirmationVisible}
+                style={styles.passwordInput}
+                textContentType="password"
+                value={passwordConfirmation}
+              />
+              <Pressable
+                accessibilityHint="Shows or hides your password confirmation."
+                accessibilityLabel={
+                  passwordConfirmationVisible
+                    ? "Hide password confirmation"
+                    : "Show password confirmation"
+                }
+                hitSlop={10}
+                onPress={() => {
+                  setPasswordConfirmationVisible((current) => !current);
+                }}
+                style={({ pressed }) => [
+                  styles.passwordToggle,
+                  pressed ? styles.passwordTogglePressed : null,
+                ]}
+              >
+                <Text style={styles.passwordToggleLabel}>
+                  {passwordConfirmationVisible ? "Hide" : "Show"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -192,13 +211,20 @@ export default function RegisterScreen() {
               void submit();
             }}
           />
-          <SecondaryButton
+          <Pressable
             disabled={loading}
-            label="Already have an account? Sign in"
             onPress={() => {
               router.push("/login");
             }}
-          />
+            style={({ pressed }) => [
+              styles.inlineLink,
+              pressed && !loading ? styles.inlineLinkPressed : null,
+            ]}
+          >
+            <Text style={styles.inlineLinkLabel}>
+              Already have an account? Sign in
+            </Text>
+          </Pressable>
         </SurfaceCard>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -219,7 +245,7 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   heroCard: {
-    gap: 16,
+    gap: 14,
   },
   eyebrow: {
     color: theme.colors.accent,
@@ -238,7 +264,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   heroPoints: {
-    gap: 10,
+    gap: 8,
   },
   heroPoint: {
     flexDirection: "row",
@@ -253,36 +279,65 @@ const styles = StyleSheet.create({
   formCard: {
     gap: 16,
   },
-  modeSwitch: {
-    flexDirection: "row",
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 4,
-    gap: 4,
-  },
-  modeChip: {
-    flex: 1,
-    borderRadius: theme.radius.pill,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modeChipActive: {
-    backgroundColor: theme.colors.ink,
-  },
-  modeChipLabel: {
-    color: theme.colors.muted,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  modeChipLabelActive: {
-    color: theme.colors.white,
-  },
   formTitle: {
     color: theme.colors.ink,
     ...theme.typography.cardTitle,
+  },
+  formSubtitle: {
+    color: theme.colors.muted,
+    ...theme.typography.body,
+  },
+  passwordGroup: {
+    gap: 6,
+  },
+  passwordLabel: {
+    color: theme.colors.ink,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  passwordInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    paddingLeft: 16,
+    paddingRight: 12,
+    minHeight: 56,
+  },
+  passwordInput: {
+    flex: 1,
+    color: theme.colors.ink,
+    fontSize: 16,
+    paddingVertical: 14,
+  },
+  passwordToggle: {
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  passwordTogglePressed: {
+    opacity: 0.8,
+  },
+  passwordToggleLabel: {
+    color: theme.colors.ink,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  inlineLink: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+  },
+  inlineLinkPressed: {
+    opacity: 0.8,
+  },
+  inlineLinkLabel: {
+    color: theme.colors.ink,
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
