@@ -1,10 +1,13 @@
 import { api, setAuthToken } from "@shared/api/client";
 import { getDeviceName } from "@shared/device/id";
+import type { BillingSummary } from "@features/billing/types";
 
 export type User = {
   id: number | string;
   name: string;
   email: string;
+  timezone?: string | null;
+  billing?: BillingSummary;
   email_verified_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -130,6 +133,53 @@ export async function login(email: string, password: string) {
   return auth.user;
 }
 
+export async function forgotPassword(email: string) {
+  const { data } = await api.post<{ message: string }>(
+    "/api/v1/forgot-password",
+    {
+      email,
+    },
+  );
+
+  return data;
+}
+
+export type ResetPasswordInput = {
+  email: string;
+  token: string;
+  password: string;
+  passwordConfirmation: string;
+};
+
+export type UpdateProfileInput = {
+  name: string;
+  email: string;
+};
+
+export type UpdatePasswordInput = {
+  currentPassword: string;
+  password: string;
+  passwordConfirmation: string;
+};
+
+export type DeleteAccountInput = {
+  email: string;
+};
+
+export async function resetPassword(input: ResetPasswordInput) {
+  const { data } = await api.post<{ message: string }>(
+    "/api/v1/reset-password",
+    {
+      email: input.email,
+      token: input.token,
+      password: input.password,
+      password_confirmation: input.passwordConfirmation,
+    },
+  );
+
+  return data;
+}
+
 export async function register(input: RegisterInput) {
   const device_name = await getDeviceName();
   const { data } = await api.post<AuthResponseEnvelope>("/api/v1/register", {
@@ -151,6 +201,42 @@ export async function register(input: RegisterInput) {
 export async function me() {
   const { data } = await api.get<ResourceEnvelope<User> | User>("/api/v1/me");
   return unwrap<User>(data);
+}
+
+export async function updateProfile(input: UpdateProfileInput) {
+  const { data } = await api.put<ResourceEnvelope<User> | User>(
+    "/api/v1/profile",
+    {
+      name: input.name,
+      email: input.email,
+    },
+  );
+
+  return unwrap<User>(data);
+}
+
+export async function updatePassword(input: UpdatePasswordInput) {
+  await api.put("/api/v1/profile/password", {
+    current_password: input.currentPassword,
+    password: input.password,
+    password_confirmation: input.passwordConfirmation,
+  });
+}
+
+export async function resendVerificationEmail() {
+  const { data } = await api.post<{ message: string }>(
+    "/api/v1/email/verification-notification",
+  );
+
+  return data;
+}
+
+export async function deleteAccount(input: DeleteAccountInput) {
+  await api.delete("/api/v1/profile", {
+    data: {
+      email: input.email,
+    },
+  });
 }
 
 export async function logout() {

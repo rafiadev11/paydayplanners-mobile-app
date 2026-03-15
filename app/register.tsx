@@ -1,28 +1,34 @@
-import { Link, Redirect } from "expo-router";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
+import { Field, PrimaryButton, SurfaceCard } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
 export default function RegisterScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user, signUp } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [passwordConfirmationVisible, setPasswordConfirmationVisible] =
+    useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,86 +53,181 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.container}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.safeArea}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: insets.top + theme.spacing.md,
+            paddingBottom: insets.bottom + theme.spacing.xl,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.card}>
-            <Text style={styles.eyebrow}>PaydayPlanners</Text>
-            <Text style={styles.title}>Create account</Text>
-            <Text style={styles.subtitle}>
-              This uses the same `POST /api/v1/register` token flow that the
-              Laravel backend already exposes.
-            </Text>
+        <SurfaceCard tone="dark" style={styles.heroCard}>
+          <Text style={styles.eyebrow}>PaydayPlanners</Text>
+          <Text style={styles.title}>Create your cashflow command center.</Text>
+          <Text style={styles.subtitle}>
+            Start with one paycheck and one bill, then let the planner show what
+            stays free before you spend.
+          </Text>
 
-            <TextInput
-              autoCapitalize="words"
-              onChangeText={setName}
-              placeholder="Full name"
-              placeholderTextColor={theme.colors.muted}
-              style={styles.input}
-              value={name}
-            />
-            <TextInput
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              onChangeText={setEmail}
-              placeholder="Email"
-              placeholderTextColor={theme.colors.muted}
-              style={styles.input}
-              value={email}
-            />
-            <TextInput
-              autoCapitalize="none"
-              onChangeText={setPassword}
-              placeholder="Password"
-              placeholderTextColor={theme.colors.muted}
-              secureTextEntry
-              style={styles.input}
-              value={password}
-            />
-            <TextInput
-              autoCapitalize="none"
-              onChangeText={setPasswordConfirmation}
-              placeholder="Confirm password"
-              placeholderTextColor={theme.colors.muted}
-              secureTextEntry
-              style={styles.input}
-              value={passwordConfirmation}
-            />
-
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-
-            <Pressable
-              disabled={loading}
-              onPress={() => {
-                void submit();
-              }}
-              style={({ pressed }) => [
-                styles.button,
-                pressed && !loading ? styles.buttonPressed : null,
-              ]}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.buttonText}>Register</Text>
-              )}
-            </Pressable>
-
-            <Text style={styles.footer}>
-              Already have an account?{" "}
-              <Link href="/login" style={styles.link}>
-                Sign in
-              </Link>
-            </Text>
+          <View style={styles.heroPoints}>
+            <View style={styles.heroPoint}>
+              <MaterialCommunityIcons
+                color={theme.colors.accent}
+                name="timeline-text-outline"
+                size={18}
+              />
+              <Text style={styles.heroPointText}>Plan by paycheck</Text>
+            </View>
+            <View style={styles.heroPoint}>
+              <MaterialCommunityIcons
+                color={theme.colors.accent}
+                name="calendar-clock-outline"
+                size={18}
+              />
+              <Text style={styles.heroPointText}>Bills and goals mapped</Text>
+            </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </SurfaceCard>
+
+        <SurfaceCard style={styles.formCard}>
+          <Text style={styles.formTitle}>Create account</Text>
+          <Text style={styles.formSubtitle}>
+            Build your first working forecast in a few minutes.
+          </Text>
+
+          <Field
+            autoCapitalize="words"
+            label="Full name"
+            onChangeText={setName}
+            placeholder="Alex Jordan"
+            returnKeyType="next"
+            textContentType="name"
+            value={name}
+          />
+          <Field
+            autoCapitalize="none"
+            autoComplete="email"
+            autoCorrect={false}
+            keyboardType="email-address"
+            label="Email"
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            returnKeyType="next"
+            textContentType="emailAddress"
+            value={email}
+          />
+          <View style={styles.passwordGroup}>
+            <Text style={styles.passwordLabel}>Password</Text>
+            <View style={styles.passwordInputWrap}>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="password-new"
+                autoCorrect={false}
+                onChangeText={setPassword}
+                placeholder="Password"
+                placeholderTextColor={theme.colors.muted}
+                returnKeyType="next"
+                secureTextEntry={!passwordVisible}
+                style={styles.passwordInput}
+                textContentType="newPassword"
+                value={password}
+              />
+              <Pressable
+                accessibilityHint="Shows or hides your password."
+                accessibilityLabel={
+                  passwordVisible ? "Hide password" : "Show password"
+                }
+                hitSlop={10}
+                onPress={() => {
+                  setPasswordVisible((current) => !current);
+                }}
+                style={({ pressed }) => [
+                  styles.passwordToggle,
+                  pressed ? styles.passwordTogglePressed : null,
+                ]}
+              >
+                <Text style={styles.passwordToggleLabel}>
+                  {passwordVisible ? "Hide" : "Show"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+          <View style={styles.passwordGroup}>
+            <Text style={styles.passwordLabel}>Confirm password</Text>
+            <View style={styles.passwordInputWrap}>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="password-new"
+                autoCorrect={false}
+                onChangeText={setPasswordConfirmation}
+                onSubmitEditing={() => {
+                  void submit();
+                }}
+                placeholder="Confirm password"
+                placeholderTextColor={theme.colors.muted}
+                returnKeyType="go"
+                secureTextEntry={!passwordConfirmationVisible}
+                style={styles.passwordInput}
+                textContentType="password"
+                value={passwordConfirmation}
+              />
+              <Pressable
+                accessibilityHint="Shows or hides your password confirmation."
+                accessibilityLabel={
+                  passwordConfirmationVisible
+                    ? "Hide password confirmation"
+                    : "Show password confirmation"
+                }
+                hitSlop={10}
+                onPress={() => {
+                  setPasswordConfirmationVisible((current) => !current);
+                }}
+                style={({ pressed }) => [
+                  styles.passwordToggle,
+                  pressed ? styles.passwordTogglePressed : null,
+                ]}
+              >
+                <Text style={styles.passwordToggleLabel}>
+                  {passwordConfirmationVisible ? "Hide" : "Show"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <PrimaryButton
+            disabled={loading}
+            icon="account-plus-outline"
+            label={loading ? "Creating account..." : "Create account"}
+            onPress={() => {
+              void submit();
+            }}
+          />
+          <Pressable
+            disabled={loading}
+            onPress={() => {
+              router.push("/login");
+            }}
+            style={({ pressed }) => [
+              styles.inlineLink,
+              pressed && !loading ? styles.inlineLinkPressed : null,
+            ]}
+          >
+            <Text style={styles.inlineLinkLabel}>
+              Already have an account? Sign in
+            </Text>
+          </Pressable>
+        </SurfaceCard>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -140,71 +241,103 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    justifyContent: "center",
     padding: 24,
+    gap: 18,
   },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 12,
-    padding: 24,
+  heroCard: {
+    gap: 14,
   },
   eyebrow: {
-    color: theme.colors.primary,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
+    color: theme.colors.accent,
+    ...theme.typography.eyebrow,
   },
   title: {
-    color: theme.colors.text,
-    fontSize: 32,
-    fontWeight: "700",
+    color: theme.colors.white,
+    ...theme.typography.title,
   },
   subtitle: {
-    color: theme.colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
-    borderColor: theme.colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    color: theme.colors.text,
-    fontSize: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  button: {
-    alignItems: "center",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 14,
-    marginTop: 8,
-    paddingVertical: 14,
-  },
-  buttonPressed: {
-    opacity: 0.9,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+    color: theme.colors.backgroundMuted,
+    ...theme.typography.body,
   },
   error: {
     color: theme.colors.danger,
     fontSize: 14,
   },
-  footer: {
-    color: theme.colors.muted,
-    fontSize: 14,
-    marginTop: 4,
+  heroPoints: {
+    gap: 8,
   },
-  link: {
-    color: theme.colors.primary,
+  heroPoint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  heroPointText: {
+    color: theme.colors.white,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  formCard: {
+    gap: 16,
+  },
+  formTitle: {
+    color: theme.colors.ink,
+    ...theme.typography.cardTitle,
+  },
+  formSubtitle: {
+    color: theme.colors.muted,
+    ...theme.typography.body,
+  },
+  passwordGroup: {
+    gap: 6,
+  },
+  passwordLabel: {
+    color: theme.colors.ink,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  passwordInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    paddingLeft: 16,
+    paddingRight: 12,
+    minHeight: 56,
+  },
+  passwordInput: {
+    flex: 1,
+    color: theme.colors.ink,
+    fontSize: 16,
+    paddingVertical: 14,
+  },
+  passwordToggle: {
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  passwordTogglePressed: {
+    opacity: 0.8,
+  },
+  passwordToggleLabel: {
+    color: theme.colors.ink,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  inlineLink: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+  },
+  inlineLinkPressed: {
+    opacity: 0.8,
+  },
+  inlineLinkLabel: {
+    color: theme.colors.ink,
+    fontSize: 15,
     fontWeight: "700",
   },
 });

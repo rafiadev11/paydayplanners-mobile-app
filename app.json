@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.paydayplanners.app"
+      "bundleIdentifier": "com.paydayplanners.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Allow PaydayPlanner to use Face ID to protect your paycheck and billing details."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,7 +34,12 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      "expo-web-browser"
+    ],
     "experiments": {
       "typedRoutes": true
     }

@@ -1,40 +1,48 @@
-import { Link } from "expo-router";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { StyleSheet, Text } from "react-native";
 
+import { AppScreen, PrimaryButton, SurfaceCard } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
 export default function NotFoundScreen() {
+  const router = useRouter();
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+    <AppScreen contentContainerStyle={styles.content}>
+      <SurfaceCard tone="warning" style={styles.card}>
         <Text style={styles.title}>Screen not found</Text>
-        <Link href="/" style={styles.link}>
-          Return home
-        </Link>
-      </View>
-    </SafeAreaView>
+        <Text style={styles.body}>
+          That route does not exist in the mobile app. Return to the main
+          planner and continue from there.
+        </Text>
+        <PrimaryButton
+          label="Go home"
+          onPress={() => {
+            router.replace("/");
+          }}
+        />
+      </SurfaceCard>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  container: {
-    flex: 1,
-    alignItems: "center",
+  content: {
+    flexGrow: 1,
     justifyContent: "center",
-    gap: 12,
+  },
+  card: {
+    alignItems: "center",
+    gap: theme.spacing.md,
   },
   title: {
-    color: theme.colors.text,
-    fontSize: 24,
-    fontWeight: "700",
+    color: theme.colors.ink,
+    ...theme.typography.title,
+    textAlign: "center",
   },
-  link: {
-    color: theme.colors.primary,
-    fontSize: 16,
-    fontWeight: "600",
+  body: {
+    color: theme.colors.muted,
+    ...theme.typography.body,
+    textAlign: "center",
   },
 });

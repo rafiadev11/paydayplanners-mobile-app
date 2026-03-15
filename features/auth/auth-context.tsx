@@ -15,6 +15,7 @@ import {
   type User,
 } from "@features/auth/api";
 import { setAuthToken } from "@shared/api/client";
+import { setAppTimezone } from "@shared/lib/timezone";
 import { tokenStorage, userStorage } from "@shared/storage/secure";
 
 type AuthContextValue = {
@@ -24,6 +25,8 @@ type AuthContextValue = {
   signUp: (input: RegisterInput) => Promise<User>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<User | null>;
+  syncUser: (user: User | null) => Promise<void>;
+  clearSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -54,6 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
+  const syncUser = async (nextUser: User | null) => {
+    setUser(nextUser);
+    setAppTimezone(nextUser?.timezone ?? null);
+    await persistUser(nextUser);
+  };
+
   useEffect(() => {
     let active = true;
 
@@ -61,7 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const cachedUser = await userStorage.get();
         if (cachedUser && active) {
-          setUser(normalizeCachedUser(JSON.parse(cachedUser)));
+          const normalizedUser = normalizeCachedUser(JSON.parse(cachedUser));
+          setUser(normalizedUser);
+          setAppTimezone(normalizedUser?.timezone);
         }
 
         const existingToken = await tokenStorage.get();
@@ -75,10 +86,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const nextUser = await me();
         if (!active) return;
         setUser(nextUser);
+        setAppTimezone(nextUser?.timezone);
         await persistUser(nextUser);
       } catch {
         if (!active) return;
         setUser(null);
+        setAppTimezone(null);
         await setAuthToken(null);
         await persistUser(null);
       } finally {
@@ -95,34 +108,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const nextUser = await login(email, password);
-    setUser(nextUser);
-    await persistUser(nextUser);
+    await syncUser(nextUser);
     return nextUser;
   };
 
   const signUp = async (input: RegisterInput) => {
     const nextUser = await register(input);
-    setUser(nextUser);
-    await persistUser(nextUser);
+    await syncUser(nextUser);
     return nextUser;
   };
 
   const signOut = async () => {
     await logout();
-    setUser(null);
-    await persistUser(null);
+    await syncUser(null);
+  };
+
+  const clearSession = async () => {
+    await setAuthToken(null);
+    await syncUser(null);
   };
 
   const refreshUser = async () => {
     try {
       const nextUser = await me();
-      setUser(nextUser);
-      await persistUser(nextUser);
+      await syncUser(nextUser);
       return nextUser;
     } catch {
       await logout();
-      setUser(null);
-      await persistUser(null);
+      await syncUser(null);
       return null;
     }
   };
@@ -136,6 +149,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         refreshUser,
+        syncUser,
+        clearSession,
       }}
     >
       {children}
