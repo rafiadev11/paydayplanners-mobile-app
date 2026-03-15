@@ -186,12 +186,16 @@ function AccountDrawer({
   userName,
   onClose,
   onOpenBilling,
+  onOpenAccount,
+  onOpenDeleteAccount,
   onSignOut,
 }: {
   visible: boolean;
   userName?: string | null;
   onClose: () => void;
   onOpenBilling: () => void;
+  onOpenAccount: () => void;
+  onOpenDeleteAccount: () => void;
   onSignOut: () => void;
 }) {
   const [mounted, setMounted] = useState(visible);
@@ -297,14 +301,14 @@ function AccountDrawer({
                 title="My subscription"
               />
               <AccountDrawerItem
-                disabled
                 icon="account-edit-outline"
+                onPress={onOpenAccount}
                 subtitle="Update your name, email, and personal profile details."
                 title="Account info"
               />
               <AccountDrawerItem
-                disabled
                 icon="delete-outline"
+                onPress={onOpenDeleteAccount}
                 subtitle="Permanently remove your account and planning data."
                 title="Delete account"
                 tone="danger"
@@ -563,6 +567,16 @@ export default function DashboardScreen() {
     router.push("/billing");
   }, [router]);
 
+  const openAccount = useCallback(() => {
+    setDrawerOpen(false);
+    router.push("/account");
+  }, [router]);
+
+  const openDeleteAccount = useCallback(() => {
+    setDrawerOpen(false);
+    router.push("/delete-account");
+  }, [router]);
+
   const handleSignOut = useCallback(() => {
     setDrawerOpen(false);
     void signOut();
@@ -784,7 +798,9 @@ export default function DashboardScreen() {
         onClose={() => {
           setDrawerOpen(false);
         }}
+        onOpenAccount={openAccount}
         onOpenBilling={openBilling}
+        onOpenDeleteAccount={openDeleteAccount}
         onSignOut={handleSignOut}
         userName={user?.name}
         visible={drawerOpen}

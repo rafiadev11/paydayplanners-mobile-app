@@ -1,4 +1,5 @@
 import { api } from "@shared/api/client";
+import { addDaysToIsoDate, todayInAppTimezone } from "@shared/lib/timezone";
 
 type CollectionEnvelope<T> = {
   data: T[];
@@ -240,18 +241,12 @@ function item<T>(payload: ItemEnvelope<T> | T) {
   return payload as T;
 }
 
-function dateString(value: Date) {
-  return value.toISOString().slice(0, 10);
-}
-
 function buildWindow(days = 90) {
-  const start = new Date();
-  const end = new Date();
-  end.setDate(end.getDate() + days);
+  const startDate = todayInAppTimezone();
 
   return {
-    start_date: dateString(start),
-    end_date: dateString(end),
+    start_date: startDate,
+    end_date: addDaysToIsoDate(startDate, days),
   };
 }
 

@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.paydayplanners.app"
+      "bundleIdentifier": "com.paydayplanners.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Allow PaydayPlanner to use Face ID to protect your paycheck and billing details."
+      }
     },
     "android": {
       "adaptiveIcon": {

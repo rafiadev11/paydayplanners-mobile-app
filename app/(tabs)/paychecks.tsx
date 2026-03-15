@@ -26,6 +26,7 @@ import {
   formatInteger,
   formatLongWeekday,
 } from "@shared/lib/format";
+import { addDaysToIsoDate, todayInAppTimezone } from "@shared/lib/timezone";
 import {
   AppScreen,
   EmptyState,
@@ -96,10 +97,7 @@ function dayDistanceLabel(value: string) {
 }
 
 function windowEndLabel(days: number) {
-  const end = new Date();
-  end.setDate(end.getDate() + days);
-
-  return formatDateWithYear(end.toISOString().slice(0, 10));
+  return formatDateWithYear(addDaysToIsoDate(todayInAppTimezone(), days));
 }
 
 function timingSummary(

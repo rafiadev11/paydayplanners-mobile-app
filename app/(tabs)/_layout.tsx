@@ -3,6 +3,7 @@ import { Redirect, Tabs } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { useAuth } from "@features/auth/auth-context";
+import { useBiometricLock } from "@features/security/biometric-lock-context";
 import { theme, withAlpha } from "@shared/ui/theme";
 
 function TabBarIcon({
@@ -17,8 +18,9 @@ function TabBarIcon({
 
 export default function TabsLayout() {
   const { ready, user } = useAuth();
+  const biometricLock = useBiometricLock();
 
-  if (!ready) {
+  if (!ready || !biometricLock.ready) {
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator color={theme.colors.primary} />
@@ -27,6 +29,15 @@ export default function TabsLayout() {
   }
 
   if (!user) return <Redirect href="/login" />;
+  if (biometricLock.enabled && biometricLock.locked) {
+    return (
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.loadingScreen}
+      />
+    );
+  }
 
   return (
     <Tabs

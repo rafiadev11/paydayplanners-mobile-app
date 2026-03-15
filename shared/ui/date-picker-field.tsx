@@ -15,6 +15,7 @@ import {
   formatDateWithYear,
   isoDateFromDate,
 } from "@shared/lib/format";
+import { getAppTimezone } from "@shared/lib/timezone";
 import { theme, withAlpha } from "@shared/ui/theme";
 
 type DatePickerFieldProps = {
@@ -29,7 +30,7 @@ type DatePickerFieldProps = {
 };
 
 function atStartOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return new Date(date.getTime());
 }
 
 function withinRange(
@@ -52,7 +53,7 @@ function defaultPickerDate(
   minimumDate?: Date | null,
   maximumDate?: Date | null,
 ) {
-  const today = atStartOfDay(new Date());
+  const today = dateFromIso(isoDateFromDate(new Date())) ?? new Date();
 
   if (withinRange(today, minimumDate, maximumDate)) {
     return today;
@@ -95,6 +96,7 @@ export function DatePickerField({
       maximumDate={maxDate ?? undefined}
       minimumDate={minDate ?? undefined}
       mode="date"
+      timeZoneName={getAppTimezone()}
       onChange={(event, nextDate) => {
         if (event.type === "dismissed" || !nextDate) {
           if (Platform.OS === "android") {

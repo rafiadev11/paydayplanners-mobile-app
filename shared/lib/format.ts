@@ -1,3 +1,11 @@
+import {
+  dateFromIsoInAppTimezone,
+  formatInAppTimezone,
+  formatWithTimezone,
+  getAppTimezone,
+  isoDateInAppTimezone,
+} from "@shared/lib/timezone";
+
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -11,29 +19,29 @@ const currencyPreciseFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-});
-
-const dateYearFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
-
-const weekdayFormatter = new Intl.DateTimeFormat("en-US", {
-  weekday: "long",
-});
-
 function parseDateValue(value: string) {
   const isoDate = isoDateFromInput(value);
 
   if (isoDate) {
-    return new Date(`${isoDate}T00:00:00`);
+    return {
+      timeZone: "UTC",
+      value: new Date(`${isoDate}T00:00:00Z`),
+    };
   }
 
-  return new Date(value);
+  return {
+    timeZone: getAppTimezone(),
+    value: new Date(value),
+  };
+}
+
+function formatParsedDate(
+  parsed: ReturnType<typeof parseDateValue>,
+  options: Intl.DateTimeFormatOptions,
+) {
+  return parsed.timeZone === getAppTimezone()
+    ? formatInAppTimezone(parsed.value, options)
+    : formatWithTimezone(parsed.value, parsed.timeZone, options);
 }
 
 export function formatCurrency(value: string | number | null | undefined) {
@@ -75,17 +83,30 @@ export function parseCurrencyInput(value: string, minimum = 0) {
 }
 
 export function formatDate(value: string | null | undefined) {
-  return value ? dateFormatter.format(parseDateValue(value)) : "Not scheduled";
+  return value
+    ? formatParsedDate(parseDateValue(value), {
+        month: "short",
+        day: "numeric",
+      })
+    : "Not scheduled";
 }
 
 export function formatDateWithYear(value: string | null | undefined) {
   return value
-    ? dateYearFormatter.format(parseDateValue(value))
+    ? formatParsedDate(parseDateValue(value), {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
     : "Not scheduled";
 }
 
 export function formatLongWeekday(value: string | null | undefined) {
-  return value ? weekdayFormatter.format(parseDateValue(value)) : "Flexible";
+  return value
+    ? formatParsedDate(parseDateValue(value), {
+        weekday: "long",
+      })
+    : "Flexible";
 }
 
 export function formatFrequency(value: string | null | undefined) {
@@ -126,7 +147,7 @@ export function weekdayFromIsoDate(value: string) {
 
   if (!normalized) return null;
 
-  return new Date(`${normalized}T00:00:00`).getDay();
+  return new Date(`${normalized}T00:00:00Z`).getUTCDay();
 }
 
 export function monthDayFromIsoDate(value: string) {
@@ -134,7 +155,7 @@ export function monthDayFromIsoDate(value: string) {
 
   if (!normalized) return null;
 
-  return new Date(`${normalized}T00:00:00`).getDate();
+  return new Date(`${normalized}T00:00:00Z`).getUTCDate();
 }
 
 export function dateFromIso(value: string | null | undefined) {
@@ -142,13 +163,9 @@ export function dateFromIso(value: string | null | undefined) {
 
   if (!normalized) return null;
 
-  return new Date(`${normalized}T00:00:00`);
+  return dateFromIsoInAppTimezone(normalized);
 }
 
 export function isoDateFromDate(value: Date) {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  return isoDateInAppTimezone(value);
 }

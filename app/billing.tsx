@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
+import { useRootNavigationState, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -22,8 +23,10 @@ import {
 } from "@features/billing/api";
 import type { BillingStatus } from "@features/billing/types";
 import { useAuth } from "@features/auth/auth-context";
+import { useBiometricLock } from "@features/security/biometric-lock-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import { formatDateWithYear } from "@shared/lib/format";
+import { addDaysToIsoDate, todayInAppTimezone } from "@shared/lib/timezone";
 import {
   AppScreen,
   ErrorState,
@@ -46,10 +49,7 @@ function priceLabel(amountCents: number, currency: string, interval: string) {
 }
 
 function forecastEndLabel(days: number | undefined) {
-  const end = new Date();
-  end.setDate(end.getDate() + (days ?? 90));
-
-  return formatDateWithYear(end.toISOString().slice(0, 10));
+  return formatDateWithYear(addDaysToIsoDate(todayInAppTimezone(), days ?? 90));
 }
 
 function yearlySavings(prices: BillingStatus["plans"][number]["prices"]) {
@@ -162,7 +162,10 @@ function currentAccessBody(status: BillingStatus) {
 }
 
 export default function BillingScreen() {
+  const router = useRouter();
+  const navigationState = useRootNavigationState();
   const { refreshUser } = useAuth();
+  const biometricLock = useBiometricLock();
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalSyncing, setPortalSyncing] = useState(false);
@@ -170,6 +173,7 @@ export default function BillingScreen() {
   const [error, setError] = useState<string | null>(null);
   const statusRef = useRef<BillingStatus | null>(null);
   const portalPendingRef = useRef(false);
+  const billingLocked = biometricLock.enabled && biometricLock.locked;
 
   const load = useCallback(async (options?: { background?: boolean }) => {
     const background = options?.background ?? false;
@@ -241,7 +245,23 @@ export default function BillingScreen() {
   }, [load, syncPortalState]);
 
   useEffect(() => {
+    if (!navigationState?.key) {
+      return;
+    }
+
+    if (router.canGoBack()) {
+      return;
+    }
+
+    router.replace("/dashboard");
+  }, [navigationState?.key, router]);
+
+  useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
+      if (billingLocked) {
+        return;
+      }
+
       if (nextState === "active" && portalPendingRef.current) {
         void finalizePortalFlow();
       }
@@ -250,7 +270,7 @@ export default function BillingScreen() {
     return () => {
       subscription.remove();
     };
-  }, [finalizePortalFlow]);
+  }, [billingLocked, finalizePortalFlow]);
 
   useFocusEffect(
     useCallback(() => {
@@ -260,8 +280,12 @@ export default function BillingScreen() {
         return;
       }
 
+      if (billingLocked) {
+        return;
+      }
+
       void load({ background: statusRef.current !== null });
-    }, [finalizePortalFlow, load]),
+    }, [billingLocked, finalizePortalFlow, load]),
   );
 
   const openCheckout = useCallback(async (interval: "month" | "year") => {
