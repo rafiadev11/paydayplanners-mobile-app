@@ -32,6 +32,9 @@ const resolvePlatformUrl = (
     ? (androidValue ?? defaultValue)
     : (iosValue ?? defaultValue);
 
+const buildUrl = (baseUrl: string, pathname: string) =>
+  new URL(pathname, baseUrl).toString();
+
 export const API_BASE_URL =
   enforceProtocol(
     resolvePlatformUrl(
@@ -45,3 +48,13 @@ export const API_BASE_URL =
 export const LEGAL_BASE_URL =
   enforceProtocol(process.env.EXPO_PUBLIC_LEGAL_URL, "EXPO_PUBLIC_LEGAL_URL") ??
   (__DEV__ ? "http://localhost" : PROD_LEGAL_FALLBACK_URL);
+
+export const TERMS_URL =
+  enforceProtocol(process.env.EXPO_PUBLIC_TERMS_URL, "EXPO_PUBLIC_TERMS_URL") ??
+  buildUrl(LEGAL_BASE_URL, "/terms");
+
+export const PRIVACY_URL =
+  enforceProtocol(
+    process.env.EXPO_PUBLIC_PRIVACY_URL,
+    "EXPO_PUBLIC_PRIVACY_URL",
+  ) ?? buildUrl(LEGAL_BASE_URL, "/privacy");
