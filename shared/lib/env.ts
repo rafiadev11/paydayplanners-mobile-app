@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 
 const PROD_API_FALLBACK_URL = "https://api.example.com";
-const PROD_LEGAL_FALLBACK_URL = "https://example.com";
+const PROD_LEGAL_FALLBACK_URL = "https://paydayplanners.com";
 
 const enforceProtocol = (value: string | undefined, label: string) => {
   if (!value) return undefined;
@@ -47,7 +47,7 @@ export const API_BASE_URL =
 
 export const LEGAL_BASE_URL =
   enforceProtocol(process.env.EXPO_PUBLIC_LEGAL_URL, "EXPO_PUBLIC_LEGAL_URL") ??
-  (__DEV__ ? "http://localhost" : PROD_LEGAL_FALLBACK_URL);
+  (__DEV__ ? API_BASE_URL : PROD_LEGAL_FALLBACK_URL);
 
 export const TERMS_URL =
   enforceProtocol(process.env.EXPO_PUBLIC_TERMS_URL, "EXPO_PUBLIC_TERMS_URL") ??
