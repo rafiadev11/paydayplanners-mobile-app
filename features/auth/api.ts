@@ -29,6 +29,7 @@ export type RegisterInput = {
   email: string;
   password: string;
   passwordConfirmation: string;
+  legalAccepted: boolean;
 };
 
 type AuthResponse = {
@@ -187,6 +188,7 @@ export async function register(input: RegisterInput) {
     email: input.email,
     password: input.password,
     password_confirmation: input.passwordConfirmation,
+    legal_accepted: input.legalAccepted,
     device_name,
   });
 

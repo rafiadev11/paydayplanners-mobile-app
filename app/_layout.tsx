@@ -136,6 +136,13 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="help-and-legal"
+            options={{
+              title: "Help & Support",
+              ...modalOptions,
+            }}
+          />
+          <Stack.Screen
             name="billing-success"
             options={{
               title: "Upgrade complete",

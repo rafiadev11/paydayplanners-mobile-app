@@ -60,7 +60,7 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <SurfaceCard tone="dark" style={styles.heroCard}>
-          <Text style={styles.eyebrow}>PaydayPlanners</Text>
+          <Text style={styles.eyebrow}>Payday Planner</Text>
           <Text style={styles.title}>Plan every paycheck before it lands.</Text>
           <Text style={styles.subtitle}>
             See the true remaining balance after bills and goals are assigned,

@@ -1,7 +1,9 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
+import { PRIVACY_URL, TERMS_URL } from "@shared/lib/env";
 import { Field, PrimaryButton, SurfaceCard } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
@@ -29,12 +32,28 @@ export default function RegisterScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [passwordConfirmationVisible, setPasswordConfirmationVisible] =
     useState(false);
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (user) return <Redirect href="/dashboard" />;
 
+  const openLegalDocument = async (url: string) => {
+    try {
+      await WebBrowser.openBrowserAsync(url);
+    } catch {
+      Alert.alert("Unable to open link", "Please try again in a moment.");
+    }
+  };
+
   const submit = async () => {
+    if (!legalAccepted) {
+      setError(
+        "Agree to the Terms and Privacy Policy before creating an account.",
+      );
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -44,6 +63,7 @@ export default function RegisterScreen() {
         email: email.trim(),
         password,
         passwordConfirmation,
+        legalAccepted,
       });
     } catch (nextError) {
       setError(getApiErrorMessage(nextError));
@@ -69,7 +89,7 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <SurfaceCard tone="dark" style={styles.heroCard}>
-          <Text style={styles.eyebrow}>PaydayPlanners</Text>
+          <Text style={styles.eyebrow}>Payday Planner</Text>
           <Text style={styles.title}>Create your cashflow command center.</Text>
           <Text style={styles.subtitle}>
             Start with one paycheck and one bill, then let the planner show what
@@ -201,10 +221,69 @@ export default function RegisterScreen() {
             </View>
           </View>
 
+          <View style={styles.legalConsentWrap}>
+            <View style={styles.legalConsentRow}>
+              <Pressable
+                accessibilityHint="Required before creating a new account."
+                accessibilityLabel={
+                  legalAccepted
+                    ? "Agreed to terms and privacy"
+                    : "Agree to terms and privacy"
+                }
+                hitSlop={8}
+                onPress={() => {
+                  setLegalAccepted((current) => {
+                    const next = !current;
+
+                    if (next) {
+                      setError(null);
+                    }
+
+                    return next;
+                  });
+                }}
+                style={({ pressed }) => [
+                  styles.checkbox,
+                  legalAccepted ? styles.checkboxSelected : null,
+                  pressed ? styles.inlineLinkPressed : null,
+                ]}
+              >
+                {legalAccepted ? (
+                  <MaterialCommunityIcons
+                    color={theme.colors.white}
+                    name="check"
+                    size={16}
+                  />
+                ) : null}
+              </Pressable>
+              <Text style={styles.legalConsentLabel}>
+                I agree to the{" "}
+                <Text
+                  onPress={() => {
+                    void openLegalDocument(TERMS_URL);
+                  }}
+                  style={styles.legalInlineLink}
+                >
+                  Terms
+                </Text>{" "}
+                and{" "}
+                <Text
+                  onPress={() => {
+                    void openLegalDocument(PRIVACY_URL);
+                  }}
+                  style={styles.legalInlineLink}
+                >
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
+            </View>
+          </View>
+
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <PrimaryButton
-            disabled={loading}
+            disabled={loading || !legalAccepted}
             icon="account-plus-outline"
             label={loading ? "Creating account..." : "Create account"}
             onPress={() => {
@@ -278,6 +357,41 @@ const styles = StyleSheet.create({
   },
   formCard: {
     gap: 16,
+  },
+  legalConsentWrap: {
+    gap: 8,
+  },
+  legalConsentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  checkboxSelected: {
+    borderColor: theme.colors.primaryStrong,
+    backgroundColor: theme.colors.primaryStrong,
+  },
+  legalConsentLabel: {
+    flex: 1,
+    color: theme.colors.muted,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  legalInlineLink: {
+    color: theme.colors.primaryStrong,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: "700",
   },
   formTitle: {
     color: theme.colors.ink,

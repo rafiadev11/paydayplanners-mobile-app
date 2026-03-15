@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
 
 import { API_BASE_URL } from "@shared/lib/env";
@@ -9,6 +9,10 @@ export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
 });
+
+export type ApiRequestConfig = AxiosRequestConfig & {
+  omitClientPlatform?: boolean;
+};
 
 let token: string | null = null;
 
@@ -24,6 +28,10 @@ export async function setAuthToken(next: string | null) {
 }
 
 api.interceptors.request.use(async (config) => {
+  const requestConfig = config as typeof config & {
+    omitClientPlatform?: boolean;
+  };
+
   if (token === null) token = await tokenStorage.get();
 
   if (token) {
@@ -31,8 +39,13 @@ api.interceptors.request.use(async (config) => {
   }
 
   config.headers.Accept = "application/json";
-  config.headers["X-Client-Platform"] =
-    Platform.OS === "ios" ? "ios" : "android";
+
+  if (requestConfig.omitClientPlatform) {
+    delete config.headers["X-Client-Platform"];
+  } else {
+    config.headers["X-Client-Platform"] =
+      Platform.OS === "ios" ? "ios" : "android";
+  }
 
   const timezone = getAppTimezone();
 

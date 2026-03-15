@@ -187,6 +187,7 @@ function AccountDrawer({
   onClose,
   onOpenBilling,
   onOpenAccount,
+  onOpenHelpAndLegal,
   onOpenDeleteAccount,
   onSignOut,
 }: {
@@ -195,6 +196,7 @@ function AccountDrawer({
   onClose: () => void;
   onOpenBilling: () => void;
   onOpenAccount: () => void;
+  onOpenHelpAndLegal: () => void;
   onOpenDeleteAccount: () => void;
   onSignOut: () => void;
 }) {
@@ -306,16 +308,59 @@ function AccountDrawer({
                 subtitle="Update your name, email, and personal profile details."
                 title="Account info"
               />
-              <AccountDrawerItem
-                icon="delete-outline"
-                onPress={onOpenDeleteAccount}
-                subtitle="Permanently remove your account and planning data."
-                title="Delete account"
-                tone="danger"
-              />
+            </View>
+
+            <View style={styles.drawerUtilitySection}>
+              <Pressable
+                onPress={onOpenHelpAndLegal}
+                style={({ pressed }) => [
+                  styles.drawerFooterLink,
+                  styles.drawerUtilityLink,
+                  pressed ? styles.drawerItemPressed : null,
+                ]}
+              >
+                <MaterialCommunityIcons
+                  color={theme.colors.primaryStrong}
+                  name="lifebuoy"
+                  size={18}
+                />
+                <Text style={styles.drawerFooterLinkLabel}>Help & Support</Text>
+                <MaterialCommunityIcons
+                  color={theme.colors.muted}
+                  name="chevron-right"
+                  size={18}
+                />
+              </Pressable>
             </View>
 
             <View style={styles.drawerFooter}>
+              <Pressable
+                onPress={onOpenDeleteAccount}
+                style={({ pressed }) => [
+                  styles.drawerFooterLink,
+                  styles.drawerFooterDangerLink,
+                  pressed ? styles.drawerItemPressed : null,
+                ]}
+              >
+                <MaterialCommunityIcons
+                  color={theme.colors.danger}
+                  name="delete-outline"
+                  size={18}
+                />
+                <Text
+                  style={[
+                    styles.drawerFooterLinkLabel,
+                    styles.drawerFooterDangerLinkLabel,
+                  ]}
+                >
+                  Delete account
+                </Text>
+                <MaterialCommunityIcons
+                  color={theme.colors.danger}
+                  name="chevron-right"
+                  size={18}
+                />
+              </Pressable>
               <SecondaryButton
                 icon="logout"
                 label="Log out"
@@ -572,6 +617,11 @@ export default function DashboardScreen() {
     router.push("/account");
   }, [router]);
 
+  const openHelpAndLegal = useCallback(() => {
+    setDrawerOpen(false);
+    router.push("/help-and-legal");
+  }, [router]);
+
   const openDeleteAccount = useCallback(() => {
     setDrawerOpen(false);
     router.push("/delete-account");
@@ -800,6 +850,7 @@ export default function DashboardScreen() {
         }}
         onOpenAccount={openAccount}
         onOpenBilling={openBilling}
+        onOpenHelpAndLegal={openHelpAndLegal}
         onOpenDeleteAccount={openDeleteAccount}
         onSignOut={handleSignOut}
         userName={user?.name}
@@ -1028,6 +1079,29 @@ const styles = StyleSheet.create({
   drawerGroup: {
     gap: theme.spacing.md,
   },
+  drawerFooterLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+  },
+  drawerUtilityLink: {
+    paddingTop: theme.spacing.xs,
+    paddingBottom: 2,
+  },
+  drawerFooterLinkLabel: {
+    color: theme.colors.primaryStrong,
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: -0.1,
+  },
+  drawerFooterDangerLink: {
+    marginTop: 0,
+  },
+  drawerFooterDangerLinkLabel: {
+    color: theme.colors.danger,
+  },
   drawerItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -1076,7 +1150,15 @@ const styles = StyleSheet.create({
     color: theme.colors.muted,
     ...theme.typography.body,
   },
-  drawerFooter: {
+  drawerUtilitySection: {
     marginTop: "auto",
+    paddingTop: theme.spacing.xs,
+    paddingBottom: 0,
+  },
+  drawerFooter: {
+    gap: theme.spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.divider,
+    paddingTop: 2,
   },
 });
