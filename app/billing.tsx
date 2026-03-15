@@ -4,6 +4,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   AppState,
   StyleSheet,
   Text,
@@ -16,6 +17,7 @@ import {
   createCustomerPortalSession,
   fetchBillingStatus,
   resumeBillingSubscription,
+  switchBillingSubscription,
   syncCustomerPortalSubscription,
 } from "@features/billing/api";
 import type { BillingStatus } from "@features/billing/types";
@@ -169,8 +171,12 @@ export default function BillingScreen() {
   const statusRef = useRef<BillingStatus | null>(null);
   const portalPendingRef = useRef(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (options?: { background?: boolean }) => {
+    const background = options?.background ?? false;
+
+    if (!background || !statusRef.current) {
+      setLoading(true);
+    }
 
     try {
       const nextStatus = await fetchBillingStatus();
@@ -179,7 +185,9 @@ export default function BillingScreen() {
     } catch (nextError) {
       setError(getApiErrorMessage(nextError));
     } finally {
-      setLoading(false);
+      if (!background || !statusRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -206,11 +214,11 @@ export default function BillingScreen() {
         });
       }
 
-      await Promise.all([refreshUser(), load()]);
+      await refreshUser();
 
       return latestStatus;
     },
-    [load, refreshUser],
+    [refreshUser],
   );
 
   const finalizePortalFlow = useCallback(async () => {
@@ -219,6 +227,7 @@ export default function BillingScreen() {
     }
 
     portalPendingRef.current = false;
+    setBusyAction(null);
     setPortalSyncing(true);
 
     try {
@@ -228,7 +237,6 @@ export default function BillingScreen() {
       await load();
     } finally {
       setPortalSyncing(false);
-      setBusyAction(null);
     }
   }, [load, syncPortalState]);
 
@@ -252,7 +260,7 @@ export default function BillingScreen() {
         return;
       }
 
-      void load();
+      void load({ background: statusRef.current !== null });
     }, [finalizePortalFlow, load]),
   );
 
@@ -316,8 +324,25 @@ export default function BillingScreen() {
     }
   }, [load, refreshUser]);
 
+  const switchSubscriptionPlan = useCallback(
+    async (interval: "month" | "year") => {
+      try {
+        setBusyAction(portalBusyKey("switch", interval));
+        const nextStatus = await switchBillingSubscription(interval);
+        setStatus(nextStatus);
+        setError(null);
+        await refreshUser();
+      } catch (nextError) {
+        setError(getApiErrorMessage(nextError));
+        await load({ background: statusRef.current !== null });
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [load, refreshUser],
+  );
+
   const managingBilling = busyAction === portalBusyKey("manage");
-  const cancelingSubscription = busyAction === portalBusyKey("cancel");
   const resumingSubscription = busyAction === resumeBusyKey();
 
   const reasons = status ? upgradeReasons(status) : [];
@@ -328,6 +353,33 @@ export default function BillingScreen() {
     : false;
   const accessEndsAt = status ? scheduledAccessEnd(status) : null;
 
+  const confirmSwitchPlan = useCallback(
+    (interval: "month" | "year", planName: string) => {
+      const targetLabel = planName.toLowerCase();
+      const title =
+        interval === "year"
+          ? "Switch to yearly billing?"
+          : "Switch to monthly billing?";
+      const message = cancellationScheduled
+        ? `This will reopen your subscription and move you to the ${targetLabel} plan.`
+        : `This will move your subscription to the ${targetLabel} plan.`;
+
+      Alert.alert(title, message, [
+        {
+          style: "cancel",
+          text: "Keep current plan",
+        },
+        {
+          text: interval === "year" ? "Switch to yearly" : "Switch to monthly",
+          onPress: () => {
+            void switchSubscriptionPlan(interval);
+          },
+        },
+      ]);
+    },
+    [cancellationScheduled, switchSubscriptionPlan],
+  );
+
   return (
     <AppScreen contentContainerStyle={styles.screenContent} topInset={false}>
       <ScreenHeader
@@ -336,14 +388,10 @@ export default function BillingScreen() {
         title="Plans"
       />
 
-      {loading || portalSyncing ? (
+      {loading && !status ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.loadingText}>
-            {portalSyncing
-              ? "Refreshing your billing status..."
-              : "Loading billing..."}
-          </Text>
+          <Text style={styles.loadingText}>Loading billing...</Text>
         </View>
       ) : error && !status ? (
         <ErrorState
@@ -355,6 +403,17 @@ export default function BillingScreen() {
         />
       ) : status ? (
         <>
+          {portalSyncing ? (
+            <SurfaceCard tone="accent">
+              <Text style={styles.inlineStatusTitle}>
+                Refreshing your billing status
+              </Text>
+              <Text style={styles.inlineStatusBody}>
+                Your billing changes are syncing in the background.
+              </Text>
+            </SurfaceCard>
+          ) : null}
+
           <SurfaceCard tone="dark" style={styles.heroCard}>
             <View style={styles.heroHeader}>
               <View style={styles.heroCopy}>
@@ -461,39 +520,23 @@ export default function BillingScreen() {
                     />
                   </>
                 ) : (
-                  <>
-                    <PrimaryButton
-                      disabled={busyAction !== null}
-                      icon="credit-card-outline"
-                      label={
-                        managingBilling
-                          ? "Opening billing..."
-                          : "Manage billing"
-                      }
-                      onPress={() => {
-                        void openPortal();
-                      }}
-                    />
-                    <SecondaryButton
-                      disabled={busyAction !== null}
-                      icon="close-circle-outline"
-                      label={
-                        cancelingSubscription
-                          ? "Opening cancel flow..."
-                          : "Cancel subscription"
-                      }
-                      onPress={() => {
-                        void openPortal("cancel");
-                      }}
-                    />
-                  </>
+                  <PrimaryButton
+                    disabled={busyAction !== null}
+                    icon="credit-card-outline"
+                    label={
+                      managingBilling ? "Opening billing..." : "Manage billing"
+                    }
+                    onPress={() => {
+                      void openPortal();
+                    }}
+                  />
                 )
               ) : null}
               {status.has_active_subscription || status.on_trial ? (
                 <Text style={styles.heroReassurance}>
                   {cancellationScheduled && accessEndsAt
                     ? `Resume subscription keeps your current plan active. Open Manage billing before ${formatDateWithYear(accessEndsAt)} if you want to switch plans instead.`
-                    : "Manage billing handles plan changes and payment details. Cancel subscription opens Stripe's cancellation screen directly."}
+                    : "Use Manage billing to change plans, update payment details, or cancel your subscription."}
                 </Text>
               ) : null}
             </View>
@@ -593,7 +636,7 @@ export default function BillingScreen() {
                       <Text style={styles.manageNoteText}>
                         {cancellationScheduled && accessEndsAt
                           ? `You’ve canceled your subscription. Tap Resume subscription to keep this plan active, or pick a different billing option below before ${formatDateWithYear(accessEndsAt)}.`
-                          : "Want to switch between monthly and yearly? The buttons below open Stripe directly for plan changes, and you can cancel from the cancel action above."}
+                          : "Want to switch between monthly and yearly? Confirm a plan below to update your subscription, or use Manage billing to cancel and handle payment details."}
                       </Text>
                     </View>
                   )}
@@ -663,11 +706,11 @@ export default function BillingScreen() {
                             label={
                               busyAction ===
                               portalBusyKey("switch", price.interval)
-                                ? "Opening billing..."
+                                ? "Switching..."
                                 : `Switch to ${price.name.toLowerCase()}`
                             }
                             onPress={() => {
-                              void openPortal("switch", price.interval);
+                              confirmSwitchPlan(price.interval, price.name);
                             }}
                           />
                         ) : currentPlanInterval === price.interval ? (
@@ -683,11 +726,11 @@ export default function BillingScreen() {
                             label={
                               busyAction ===
                               portalBusyKey("switch", price.interval)
-                                ? "Opening billing..."
+                                ? "Switching..."
                                 : `Switch to ${price.name.toLowerCase()}`
                             }
                             onPress={() => {
-                              void openPortal("switch", price.interval);
+                              confirmSwitchPlan(price.interval, price.name);
                             }}
                           />
                         )}
@@ -727,6 +770,14 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   loadingText: {
+    color: theme.colors.muted,
+    ...theme.typography.body,
+  },
+  inlineStatusTitle: {
+    color: theme.colors.ink,
+    ...theme.typography.bodyStrong,
+  },
+  inlineStatusBody: {
     color: theme.colors.muted,
     ...theme.typography.body,
   },

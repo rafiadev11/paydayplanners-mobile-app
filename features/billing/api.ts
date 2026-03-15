@@ -93,3 +93,12 @@ export async function resumeBillingSubscription() {
 
   return item(data);
 }
+
+export async function switchBillingSubscription(interval: "month" | "year") {
+  const { data } = await api.post<ItemEnvelope<BillingStatus> | BillingStatus>(
+    "/api/v1/billing/subscription/switch",
+    { interval },
+  );
+
+  return item(data);
+}
