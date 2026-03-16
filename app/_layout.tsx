@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "@features/auth/auth-context";
+import { BillReminderProvider } from "@features/notifications/bill-reminder-context";
 import {
   BiometricLockProvider,
   useBiometricLock,
@@ -345,9 +346,11 @@ function BiometricLockScreen() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <BiometricLockProvider>
-        <RootNavigator />
-      </BiometricLockProvider>
+      <BillReminderProvider>
+        <BiometricLockProvider>
+          <RootNavigator />
+        </BiometricLockProvider>
+      </BillReminderProvider>
     </AuthProvider>
   );
 }

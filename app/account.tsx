@@ -20,6 +20,7 @@ import {
   type User,
 } from "@features/auth/api";
 import { useAuth } from "@features/auth/auth-context";
+import { useBillReminders } from "@features/notifications/bill-reminder-context";
 import { useBiometricLock } from "@features/security/biometric-lock-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import { formatDateWithYear } from "@shared/lib/format";
@@ -208,6 +209,7 @@ export default function AccountInfoScreen() {
   const insets = useSafeAreaInsets();
   const { ready, user, syncUser } = useAuth();
   const biometricLock = useBiometricLock();
+  const billReminders = useBillReminders();
   const {
     capability,
     disableBiometricLock,
@@ -236,6 +238,8 @@ export default function AccountInfoScreen() {
   const [securityMessage, setSecurityMessage] = useState<string | null>(null);
   const [securityError, setSecurityError] = useState<string | null>(null);
   const [securityBusy, setSecurityBusy] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null);
+  const [reminderError, setReminderError] = useState<string | null>(null);
   const [verificationTone, setVerificationTone] = useState<
     "info" | "success" | "danger"
   >("info");
@@ -258,6 +262,11 @@ export default function AccountInfoScreen() {
   const biometricStatusLabel = biometricEnabled
     ? `${capability.label} on`
     : "Off";
+  const reminderStatusLabel = billReminders.enabled
+    ? "On"
+    : billReminders.permissionStatus === "denied"
+      ? "Blocked"
+      : "Off";
 
   useEffect(() => {
     if (!navigationState?.key) {
@@ -417,6 +426,27 @@ export default function AccountInfoScreen() {
     } finally {
       setSecurityBusy(false);
     }
+  };
+
+  const handleEnableReminders = async () => {
+    setReminderError(null);
+    setReminderMessage(null);
+
+    const result = await billReminders.enableReminders();
+
+    if (result.ok) {
+      setReminderMessage(result.message);
+      return;
+    }
+
+    setReminderError(result.message);
+  };
+
+  const handleDisableReminders = async () => {
+    setReminderError(null);
+    setReminderMessage(null);
+    await billReminders.disableReminders();
+    setReminderMessage("Bill reminders are now off on this device.");
   };
 
   return (
@@ -613,6 +643,152 @@ export default function AccountInfoScreen() {
                 tone="secondary"
               />
             ) : null}
+          </View>
+        </SurfaceCard>
+
+        <SurfaceCard style={styles.formCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderCopy}>
+              <Text style={styles.cardTitle}>Bill reminders</Text>
+              <Text style={styles.cardSubtitle}>
+                Get a basic reminder before upcoming bills are due. Free
+                reminders use one morning alert per day so they stay useful
+                without getting noisy.
+              </Text>
+            </View>
+            <MaterialCommunityIcons
+              color={theme.colors.primaryStrong}
+              name="bell-ring-outline"
+              size={24}
+            />
+          </View>
+
+          <View style={styles.securitySummaryRow}>
+            <View style={styles.securitySummaryCopy}>
+              <Text style={styles.securitySummaryTitle}>
+                Upcoming bill alerts
+              </Text>
+              <Text style={styles.securitySummaryBody}>
+                {billReminders.enabled
+                  ? billReminders.scheduledCount > 0
+                    ? `${billReminders.scheduledCount} reminder${billReminders.scheduledCount === 1 ? "" : "s"} currently scheduled from your upcoming bills.`
+                    : "Reminders are on. New alerts will schedule as bills enter the planning window."
+                  : "Default timing sends a reminder the morning before a bill is due, or the due morning if the earlier reminder was missed."}
+              </Text>
+            </View>
+            <StatusBadge
+              label={reminderStatusLabel}
+              tone={
+                billReminders.enabled
+                  ? "success"
+                  : billReminders.permissionStatus === "denied"
+                    ? "warning"
+                    : "neutral"
+              }
+            />
+          </View>
+
+          <View style={styles.infoStrip}>
+            <MaterialCommunityIcons
+              color={theme.colors.primaryStrong}
+              name="shield-outline"
+              size={18}
+            />
+            <Text style={styles.infoStripLabel}>
+              Reminder notifications stay generic on the lock screen and open
+              the Bills tab when tapped.
+            </Text>
+          </View>
+
+          {reminderError ? (
+            <NoticeBanner
+              icon="alert-circle-outline"
+              message={reminderError}
+              tone="danger"
+            />
+          ) : null}
+          {reminderMessage ? (
+            <NoticeBanner
+              icon="check-circle-outline"
+              message={reminderMessage}
+              tone="success"
+            />
+          ) : null}
+
+          <View style={styles.actionColumn}>
+            {billReminders.enabled ? (
+              <>
+                <ActionButton
+                  disabled={billReminders.syncing}
+                  icon="refresh"
+                  label={
+                    billReminders.syncing
+                      ? "Refreshing reminders..."
+                      : "Refresh reminders"
+                  }
+                  onPress={() => {
+                    setReminderError(null);
+                    setReminderMessage(null);
+                    void billReminders.refreshReminders().then((result) => {
+                      if (result.ok) {
+                        setReminderMessage(result.message);
+                        return;
+                      }
+
+                      setReminderError(result.message);
+                    });
+                  }}
+                />
+                <ActionButton
+                  disabled={billReminders.syncing}
+                  icon="bell-off-outline"
+                  label={
+                    billReminders.syncing
+                      ? "Updating reminders..."
+                      : "Turn off bill reminders"
+                  }
+                  onPress={() => {
+                    void handleDisableReminders();
+                  }}
+                  tone="secondary"
+                />
+              </>
+            ) : billReminders.permissionStatus === "denied" ? (
+              <>
+                <ActionButton
+                  disabled={billReminders.syncing}
+                  icon="cog-outline"
+                  label="Open device settings"
+                  onPress={() => {
+                    void billReminders.openDeviceSettings();
+                  }}
+                />
+                <ActionButton
+                  disabled={billReminders.syncing}
+                  icon="refresh"
+                  label="Check permission again"
+                  onPress={() => {
+                    setReminderError(null);
+                    setReminderMessage(null);
+                    void handleEnableReminders();
+                  }}
+                  tone="secondary"
+                />
+              </>
+            ) : (
+              <ActionButton
+                disabled={billReminders.syncing}
+                icon="bell-ring-outline"
+                label={
+                  billReminders.syncing
+                    ? "Turning on reminders..."
+                    : "Turn on bill reminders"
+                }
+                onPress={() => {
+                  void handleEnableReminders();
+                }}
+              />
+            )}
           </View>
         </SurfaceCard>
 

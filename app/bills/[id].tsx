@@ -18,6 +18,7 @@ import {
   type BillCategory,
   type BillInput,
 } from "@features/planning/api";
+import { useBillReminders } from "@features/notifications/bill-reminder-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   parseCurrencyInput,
@@ -49,6 +50,7 @@ const frequencyOptions: BillInput["frequency"][] = [
 
 export default function EditBillScreen() {
   const router = useRouter();
+  const billReminders = useBillReminders();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [categories, setCategories] = useState<BillCategory[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -157,6 +159,7 @@ export default function EditBillScreen() {
 
     try {
       await updateBill(id, payload);
+      await billReminders.refreshReminders();
       router.back();
     } catch (nextError) {
       setError(getApiErrorMessage(nextError));

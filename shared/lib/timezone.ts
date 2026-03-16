@@ -132,3 +132,35 @@ export function dateFromIsoInAppTimezone(value: string | null | undefined) {
 
   return new Date(utcGuess.getTime() - offset * 60_000);
 }
+
+export function dateAtTimeInAppTimezone(
+  value: string | null | undefined,
+  hour: number,
+  minute = 0,
+  offsetDays = 0,
+) {
+  if (!value) {
+    return null;
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day] = match;
+  const utcGuess = new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day) + offsetDays,
+      hour,
+      minute,
+      0,
+    ),
+  );
+  const offset = timeZoneOffsetMinutes(utcGuess);
+
+  return new Date(utcGuess.getTime() - offset * 60_000);
+}
