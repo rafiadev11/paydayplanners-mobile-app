@@ -16,6 +16,7 @@ import {
   type BillCategory,
   type BillInput,
 } from "@features/planning/api";
+import { useBillReminders } from "@features/notifications/bill-reminder-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   parseCurrencyInput,
@@ -46,6 +47,7 @@ const frequencyOptions: BillInput["frequency"][] = [
 
 export default function NewBillScreen() {
   const router = useRouter();
+  const billReminders = useBillReminders();
   const [categories, setCategories] = useState<BillCategory[]>([]);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -136,6 +138,7 @@ export default function NewBillScreen() {
 
     try {
       await createBill(payload);
+      await billReminders.refreshReminders();
       router.back();
     } catch (nextError) {
       setError(getApiErrorMessage(nextError));
