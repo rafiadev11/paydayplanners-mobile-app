@@ -1,5 +1,6 @@
 {
   "expo": {
+    "owner": "powermyfitness",
     "name": "Payday Planner",
     "slug": "paydayplanners",
     "scheme": "paydayplanners",
@@ -43,6 +44,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "befcd00c-a29b-4428-8343-60ad39794d33"
+      }
     }
   }
 }
