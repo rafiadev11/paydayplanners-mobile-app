@@ -2,13 +2,7 @@ import { Stack, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "@features/auth/auth-context";
@@ -67,7 +61,14 @@ function RootNavigator() {
   if (!ready || !biometricLock.ready) {
     return (
       <View style={styles.loadingScreen}>
-        <ActivityIndicator color={theme.colors.primary} size="small" />
+        <Image
+          source={require("../assets/splash-icon.png")}
+          style={styles.loadingLogo}
+          resizeMode="contain"
+        />
+        <Text style={styles.loadingTagline}>
+          Every payday, perfectly planned.
+        </Text>
       </View>
     );
   }
@@ -363,7 +364,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.background,
+    backgroundColor: "#F4EFE7",
+  },
+  loadingLogo: {
+    width: 200,
+    height: 200,
+    marginBottom: 20,
+  },
+  loadingTagline: {
+    color: "rgba(19, 34, 56, 0.7)",
+    fontSize: 17,
+    fontStyle: "italic",
+    textAlign: "center",
+    paddingHorizontal: 48,
   },
   closeButton: {
     alignItems: "center",
