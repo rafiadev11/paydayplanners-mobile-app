@@ -47,6 +47,25 @@ npm run android
 
 Update `.env.production.local` before any preview or production build.
 
+## Release commands
+
+```bash
+npm run build:ios:preview
+npm run build:android:preview
+npm run build:ipa
+npm run build:aab
+npm run build:apk
+npm run ship:ios
+npm run ship:android
+npm run ship
+npm run ota
+npm run ota:ios
+npm run ota:android
+npm run ota:all
+```
+
+`ship:ios` and `ship` use EAS Submit once `submit.production.ios.ascAppId` is configured in `eas.json`.
+
 ## Quality gates
 
 ```bash

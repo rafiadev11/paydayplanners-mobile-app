@@ -11,7 +11,20 @@ import {
   BiometricLockProvider,
   useBiometricLock,
 } from "@features/security/biometric-lock-context";
+import { SENTRY_DSN, SENTRY_ENABLE_DEV } from "@shared/lib/env";
 import { theme, withAlpha } from "@shared/ui/theme";
+import * as Sentry from "@sentry/react-native";
+
+const shouldInitSentry = !__DEV__ || SENTRY_ENABLE_DEV;
+
+if (shouldInitSentry) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    debug: __DEV__,
+    sendDefaultPii: false,
+    enableLogs: false,
+  });
+}
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -344,7 +357,7 @@ function BiometricLockScreen() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <AuthProvider>
       <BillReminderProvider>
@@ -355,6 +368,8 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+export default shouldInitSentry ? Sentry.wrap(RootLayout) : RootLayout;
 
 const styles = StyleSheet.create({
   appShell: {
