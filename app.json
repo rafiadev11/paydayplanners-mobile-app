@@ -47,6 +47,14 @@
           "resizeMode": "contain",
           "imageWidth": 200
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "payday-planner-mobile",
+          "organization": "power-my-fitness"
+        }
       ]
     ],
     "experiments": {
@@ -57,6 +65,12 @@
       "eas": {
         "projectId": "befcd00c-a29b-4428-8343-60ad39794d33"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/befcd00c-a29b-4428-8343-60ad39794d33"
     }
   }
 }

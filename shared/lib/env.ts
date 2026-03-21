@@ -1,7 +1,12 @@
 import { Platform } from "react-native";
 
-const PROD_API_FALLBACK_URL = "https://api.example.com";
+const PROD_API_FALLBACK_URL = "https://paydayplanners.com";
 const PROD_LEGAL_FALLBACK_URL = "https://paydayplanners.com";
+const SENTRY_DSN_FALLBACK =
+  "https://5d338f29b34922a5f50d88ea41207489@o4510842676838400.ingest.us.sentry.io/4511074456240128";
+
+const toBool = (value: string | undefined) =>
+  value?.trim().toLowerCase() === "true";
 
 const enforceProtocol = (value: string | undefined, label: string) => {
   if (!value) return undefined;
@@ -58,3 +63,10 @@ export const PRIVACY_URL =
     process.env.EXPO_PUBLIC_PRIVACY_URL,
     "EXPO_PUBLIC_PRIVACY_URL",
   ) ?? buildUrl(LEGAL_BASE_URL, "/privacy");
+
+export const SENTRY_DSN =
+  process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || SENTRY_DSN_FALLBACK;
+
+export const SENTRY_ENABLE_DEV = toBool(
+  process.env.EXPO_PUBLIC_SENTRY_ENABLE_DEV,
+);
