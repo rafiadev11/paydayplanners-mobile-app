@@ -88,34 +88,6 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <SurfaceCard tone="dark" style={styles.heroCard}>
-          <Text style={styles.eyebrow}>Payday Planner</Text>
-          <Text style={styles.title}>Create your cashflow command center.</Text>
-          <Text style={styles.subtitle}>
-            Start with one paycheck and one bill, then let the planner show what
-            stays free before you spend.
-          </Text>
-
-          <View style={styles.heroPoints}>
-            <View style={styles.heroPoint}>
-              <MaterialCommunityIcons
-                color={theme.colors.accent}
-                name="timeline-text-outline"
-                size={18}
-              />
-              <Text style={styles.heroPointText}>Plan by paycheck</Text>
-            </View>
-            <View style={styles.heroPoint}>
-              <MaterialCommunityIcons
-                color={theme.colors.accent}
-                name="calendar-clock-outline"
-                size={18}
-              />
-              <Text style={styles.heroPointText}>Bills and goals mapped</Text>
-            </View>
-          </View>
-        </SurfaceCard>
-
         <SurfaceCard style={styles.formCard}>
           <Text style={styles.formTitle}>Create account</Text>
           <Text style={styles.formSubtitle}>
@@ -323,37 +295,9 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 18,
   },
-  heroCard: {
-    gap: 14,
-  },
-  eyebrow: {
-    color: theme.colors.accent,
-    ...theme.typography.eyebrow,
-  },
-  title: {
-    color: theme.colors.white,
-    ...theme.typography.title,
-  },
-  subtitle: {
-    color: theme.colors.backgroundMuted,
-    ...theme.typography.body,
-  },
   error: {
     color: theme.colors.danger,
     fontSize: 14,
-  },
-  heroPoints: {
-    gap: 8,
-  },
-  heroPoint: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  heroPointText: {
-    color: theme.colors.white,
-    fontSize: 14,
-    fontWeight: "600",
   },
   formCard: {
     gap: 16,
