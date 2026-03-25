@@ -52,6 +52,8 @@ Update `.env.production.local` before any preview or production build.
 ```bash
 npm run build:ios:preview
 npm run build:android:preview
+npm run version:set -- 1.0.1
+npm run version:check
 npm run build:ipa
 npm run build:aab
 npm run build:apk
@@ -64,6 +66,8 @@ npm run ota:android
 npm run ota:all
 ```
 
+`version:set` updates `app.json`, `package.json`, and `package-lock.json` together.
+`build:ipa`, `build:aab`, `build:apk`, `ship:ios`, `ship:android`, and `ship` require `version:check` to pass before they run.
 `ship:ios` and `ship` use EAS Submit once `submit.production.ios.ascAppId` is configured in `eas.json`.
 
 ## Quality gates
