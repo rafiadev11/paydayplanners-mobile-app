@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
+import type { BillingSummary } from "@features/billing/types";
 import {
   fetchBills,
   fetchDashboard,
@@ -187,6 +188,7 @@ function AccountDrawerItem({
 function AccountDrawer({
   visible,
   userName,
+  billing,
   onClose,
   onOpenBilling,
   onOpenAccount,
@@ -196,6 +198,7 @@ function AccountDrawer({
 }: {
   visible: boolean;
   userName?: string | null;
+  billing?: BillingSummary | null;
   onClose: () => void;
   onOpenBilling: () => void;
   onOpenAccount: () => void;
@@ -302,8 +305,18 @@ function AccountDrawer({
               <AccountDrawerItem
                 icon="credit-card-outline"
                 onPress={onOpenBilling}
-                subtitle="Manage your plan, trial, and subscription details."
-                title="My subscription"
+                subtitle={
+                  billing?.has_complimentary_access
+                    ? "View your current access."
+                    : billing?.has_pro_access
+                      ? "Manage your plan, trial, and subscription details."
+                      : "Compare plans and review your current access."
+                }
+                title={
+                  billing?.has_complimentary_access
+                    ? "My plan"
+                    : "My subscription"
+                }
               />
               <AccountDrawerItem
                 icon="account-edit-outline"
@@ -851,6 +864,7 @@ export default function DashboardScreen() {
       </AppScreen>
 
       <AccountDrawer
+        billing={user?.billing}
         onClose={() => {
           setDrawerOpen(false);
         }}
