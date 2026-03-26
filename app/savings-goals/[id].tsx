@@ -172,6 +172,8 @@ export default function EditSavingsGoalScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         showsVerticalScrollIndicator={false}
       >
         <SurfaceCard tone="accent">

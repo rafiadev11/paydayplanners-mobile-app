@@ -468,6 +468,8 @@ export default function AccountInfoScreen() {
           },
         ]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
