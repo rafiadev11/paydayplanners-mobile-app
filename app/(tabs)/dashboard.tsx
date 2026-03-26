@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -42,6 +43,8 @@ import {
   SurfaceCard,
 } from "@shared/ui/primitives";
 import { theme, withAlpha } from "@shared/ui/theme";
+
+const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
 
 function statusTone(status: string) {
   switch (status) {
@@ -366,6 +369,9 @@ function AccountDrawer({
                 label="Log out"
                 onPress={onSignOut}
               />
+              <Text style={styles.drawerVersionLabel}>
+                Version {APP_VERSION}
+              </Text>
             </View>
           </SafeAreaView>
         </Animated.View>
@@ -1160,5 +1166,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.divider,
     paddingTop: 2,
+  },
+  drawerVersionLabel: {
+    color: theme.colors.muted,
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+    textAlign: "center",
+    paddingTop: theme.spacing.sm,
   },
 });
