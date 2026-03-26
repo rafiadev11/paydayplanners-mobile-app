@@ -254,7 +254,7 @@ export default function HelpAndLegalScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.screen}
     >
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -438,6 +438,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(theme.colors.accent, 0.12),
   },
   content: {
+    flexGrow: 1,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.lg,
     gap: theme.spacing.lg,
