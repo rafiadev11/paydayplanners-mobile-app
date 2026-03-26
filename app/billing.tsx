@@ -658,7 +658,9 @@ export default function BillingScreen() {
                   <SectionTitle
                     action={
                       <StatusBadge
-                        label={plan.slug === status.plan ? "current" : plan.slug}
+                        label={
+                          plan.slug === status.plan ? "current" : plan.slug
+                        }
                         tone={plan.slug === "pro" ? "primary" : "neutral"}
                       />
                     }
@@ -689,9 +691,9 @@ export default function BillingScreen() {
                             size={18}
                           />
                           <Text style={styles.trialNoteText}>
-                            Start with a 14-day free trial after entering payment
-                            details. Your selected plan continues after the trial
-                            unless you cancel before then.
+                            Start with a 14-day free trial after entering
+                            payment details. Your selected plan continues after
+                            the trial unless you cancel before then.
                           </Text>
                         </View>
                       ) : (
