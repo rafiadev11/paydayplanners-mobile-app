@@ -107,7 +107,7 @@ export default function NewSavingsGoalScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.screen}
     >
       <ScrollView
@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   content: {
+    flexGrow: 1,
     padding: theme.spacing.lg,
     gap: theme.spacing.lg,
     paddingBottom: 72,
