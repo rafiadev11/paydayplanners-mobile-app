@@ -5,4 +5,10 @@ const compat = new FlatCompat({
   baseDirectory: import.meta.dirname,
 });
 
-export default [js.configs.recommended, ...compat.extends("expo")];
+export default [
+  {
+    ignores: ["dist/**", "web-build/**", ".expo/**", "ios/**", "android/**"],
+  },
+  js.configs.recommended,
+  ...compat.extends("expo"),
+];
