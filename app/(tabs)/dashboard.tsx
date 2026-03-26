@@ -313,7 +313,9 @@ function AccountDrawer({
                       : "Compare plans and review your current access."
                 }
                 title={
-                  billing?.has_complimentary_access ? "My plan" : "My subscription"
+                  billing?.has_complimentary_access
+                    ? "My plan"
+                    : "My subscription"
                 }
               />
               <AccountDrawerItem
