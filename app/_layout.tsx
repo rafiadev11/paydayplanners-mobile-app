@@ -132,7 +132,9 @@ function RootNavigator() {
           <Stack.Screen
             name="billing"
             options={{
-              title: "Billing",
+              title: user?.billing?.has_complimentary_access
+                ? "Plan"
+                : "Billing",
               ...modalOptions,
             }}
           />

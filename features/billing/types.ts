@@ -1,8 +1,10 @@
 export type BillingSummary = {
   plan: "free" | "pro";
   has_pro_access: boolean;
+  has_complimentary_access: boolean;
   has_active_subscription: boolean;
   on_trial: boolean;
+  access_source: "free" | "trial" | "subscription" | "complimentary";
   trial_available: boolean;
   trial_started_at?: string | null;
   trial_ends_at?: string | null;

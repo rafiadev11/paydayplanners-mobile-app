@@ -147,6 +147,7 @@ export default function DeleteAccountScreen() {
   );
   const accessLabel = useMemo(() => {
     if (!user?.billing) return "Free";
+    if (user.billing.has_complimentary_access) return "Complimentary Pro";
     if (user.billing.on_trial) return "Pro trial";
     if (user.billing.has_active_subscription) return "Pro";
     if (user.billing.has_pro_access) return "Pro access";

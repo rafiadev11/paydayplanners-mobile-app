@@ -104,16 +104,26 @@ function scheduledAccessEnd(status: BillingStatus) {
   return status.subscription?.ends_at ?? null;
 }
 
+function hasManagedBillingAccess(status: BillingStatus) {
+  return status.has_active_subscription || status.on_trial;
+}
+
+function hasComplimentaryOnlyAccess(status: BillingStatus) {
+  return status.access_source === "complimentary";
+}
+
 function hasScheduledCancellation(status: BillingStatus) {
-  return Boolean(status.has_pro_access && scheduledAccessEnd(status));
+  return Boolean(hasManagedBillingAccess(status) && scheduledAccessEnd(status));
 }
 
 function statusSnapshot(status: BillingStatus | null) {
   return JSON.stringify({
     plan: status?.plan ?? null,
     has_pro_access: status?.has_pro_access ?? null,
+    has_complimentary_access: status?.has_complimentary_access ?? null,
     has_active_subscription: status?.has_active_subscription ?? null,
     on_trial: status?.on_trial ?? null,
+    access_source: status?.access_source ?? null,
     subscription_status: status?.subscription_status ?? null,
     current_interval: status?.subscription?.current_interval ?? null,
     current_amount_cents: status?.subscription?.current_amount_cents ?? null,
@@ -137,6 +147,10 @@ function resumeBusyKey(interval?: "month" | "year") {
 function currentAccessBody(status: BillingStatus) {
   if (hasScheduledCancellation(status)) {
     return `Your subscription is canceled. You’ll keep Pro until ${formatDateWithYear(scheduledAccessEnd(status) ?? "")}, then your account returns to Free.`;
+  }
+
+  if (hasComplimentaryOnlyAccess(status)) {
+    return "Complimentary Pro is active on this account.";
   }
 
   const billingLabel = currentBillingLabel(status);
@@ -372,6 +386,10 @@ export default function BillingScreen() {
   const reasons = status ? upgradeReasons(status) : [];
   const currentBilling = status ? currentBillingLabel(status) : null;
   const currentPlanInterval = status?.subscription?.current_interval ?? null;
+  const complimentaryAccess = status
+    ? hasComplimentaryOnlyAccess(status)
+    : false;
+  const managedBillingAccess = status ? hasManagedBillingAccess(status) : false;
   const cancellationScheduled = status
     ? hasScheduledCancellation(status)
     : false;
@@ -407,9 +425,13 @@ export default function BillingScreen() {
   return (
     <AppScreen contentContainerStyle={styles.screenContent} topInset={false}>
       <ScreenHeader
-        eyebrow="Billing"
-        subtitle="Unlock the full planning horizon and manage your subscription."
-        title="Plans"
+        eyebrow={complimentaryAccess ? "Access" : "Billing"}
+        subtitle={
+          complimentaryAccess
+            ? "Full Pro access is already active."
+            : "Review your access, upgrade options, and subscription details."
+        }
+        title={complimentaryAccess ? "Plan" : "Plans"}
       />
 
       {loading && !status ? (
@@ -443,7 +465,11 @@ export default function BillingScreen() {
               <View style={styles.heroCopy}>
                 <Text style={styles.heroEyebrow}>Current access</Text>
                 <Text style={styles.heroTitle}>
-                  {status.has_pro_access ? "PaydayPlanner Pro" : "Free plan"}
+                  {complimentaryAccess
+                    ? "Complimentary Pro"
+                    : status.has_pro_access
+                      ? "PaydayPlanner Pro"
+                      : "Free plan"}
                 </Text>
                 <Text style={styles.heroBody}>{currentAccessBody(status)}</Text>
               </View>
@@ -451,9 +477,11 @@ export default function BillingScreen() {
                 label={
                   cancellationScheduled
                     ? "canceled"
-                    : status.on_trial
-                      ? "trial"
-                      : status.plan
+                    : complimentaryAccess
+                      ? "complimentary"
+                      : status.on_trial
+                        ? "trial"
+                        : status.plan
                 }
                 tone={
                   cancellationScheduled
@@ -481,7 +509,19 @@ export default function BillingScreen() {
                   </Text>
                 </View>
               </View>
-            ) : status.has_active_subscription || status.on_trial ? (
+            ) : complimentaryAccess ? (
+              <View style={styles.heroMeta}>
+                <View style={styles.heroMetaItem}>
+                  <Text style={styles.heroMetaLabel}>Access</Text>
+                  <Text style={styles.heroMetaValue}>Complimentary Pro</Text>
+                </View>
+                <View style={styles.heroMetaDivider} />
+                <View style={styles.heroMetaItem}>
+                  <Text style={styles.heroMetaLabel}>Status</Text>
+                  <Text style={styles.heroMetaValue}>Active</Text>
+                </View>
+              </View>
+            ) : managedBillingAccess ? (
               <View style={styles.heroMeta}>
                 <View style={styles.heroMetaItem}>
                   <Text style={styles.heroMetaLabel}>
@@ -519,7 +559,12 @@ export default function BillingScreen() {
                   Choose monthly or yearly below to start your 14-day trial.
                 </Text>
               ) : null}
-              {status.has_active_subscription || status.on_trial ? (
+              {complimentaryAccess ? (
+                <Text style={styles.heroReassurance}>
+                  Everything is already unlocked.
+                </Text>
+              ) : null}
+              {managedBillingAccess ? (
                 cancellationScheduled ? (
                   <>
                     <PrimaryButton
@@ -556,7 +601,7 @@ export default function BillingScreen() {
                   />
                 )
               ) : null}
-              {status.has_active_subscription || status.on_trial ? (
+              {managedBillingAccess ? (
                 <Text style={styles.heroReassurance}>
                   {cancellationScheduled && accessEndsAt
                     ? `Resume subscription keeps your current plan active. Open Manage billing before ${formatDateWithYear(accessEndsAt)} if you want to switch plans instead.`
@@ -593,191 +638,197 @@ export default function BillingScreen() {
             </SurfaceCard>
           ) : null}
 
-          {status.plans.map((plan) => (
-            <SurfaceCard
-              key={plan.slug}
-              tone={plan.slug === "pro" ? "accent" : "light"}
-              style={[
-                styles.planCard,
-                plan.slug === "free"
-                  ? [
-                      styles.freePlanCard,
-                      status.has_pro_access ? styles.freePlanCardQuiet : null,
-                    ]
-                  : null,
-              ]}
-            >
-              <SectionTitle
-                action={
-                  <StatusBadge
-                    label={plan.slug === status.plan ? "current" : plan.slug}
-                    tone={plan.slug === "pro" ? "primary" : "neutral"}
-                  />
-                }
-                subtitle={plan.description ?? undefined}
-                title={plan.name}
-              />
-
-              {plan.slug === "pro" ? (
-                <>
-                  <View style={styles.featureList}>
-                    {(plan.features ?? []).map((feature) => (
-                      <View key={feature} style={styles.featureRow}>
-                        <MaterialCommunityIcons
-                          color={theme.colors.primaryStrong}
-                          name="check-circle-outline"
-                          size={18}
-                        />
-                        <Text style={styles.featureText}>{feature}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {!status.has_pro_access ? (
-                    <View style={styles.trialNote}>
-                      <MaterialCommunityIcons
-                        color={theme.colors.primaryStrong}
-                        name="rocket-launch-outline"
-                        size={18}
-                      />
-                      <Text style={styles.trialNoteText}>
-                        Start with a 14-day free trial after entering payment
-                        details. Your selected plan continues after the trial
-                        unless you cancel before then.
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.manageNote}>
-                      <MaterialCommunityIcons
-                        color={theme.colors.primaryStrong}
-                        name={
-                          cancellationScheduled
-                            ? "alert-circle-outline"
-                            : "swap-horizontal"
+          {!complimentaryAccess
+            ? status.plans.map((plan) => (
+                <SurfaceCard
+                  key={plan.slug}
+                  tone={plan.slug === "pro" ? "accent" : "light"}
+                  style={[
+                    styles.planCard,
+                    plan.slug === "free"
+                      ? [
+                          styles.freePlanCard,
+                          status.has_pro_access
+                            ? styles.freePlanCardQuiet
+                            : null,
+                        ]
+                      : null,
+                  ]}
+                >
+                  <SectionTitle
+                    action={
+                      <StatusBadge
+                        label={
+                          plan.slug === status.plan ? "current" : plan.slug
                         }
-                        size={18}
+                        tone={plan.slug === "pro" ? "primary" : "neutral"}
                       />
-                      <Text style={styles.manageNoteText}>
-                        {cancellationScheduled && accessEndsAt
-                          ? `You’ve canceled your subscription. Tap Resume subscription to keep this plan active, or pick a different billing option below before ${formatDateWithYear(accessEndsAt)}.`
-                          : "Want to switch between monthly and yearly? Confirm a plan below to update your subscription, or use Manage billing to cancel and handle payment details."}
+                    }
+                    subtitle={plan.description ?? undefined}
+                    title={plan.name}
+                  />
+
+                  {plan.slug === "pro" ? (
+                    <>
+                      <View style={styles.featureList}>
+                        {(plan.features ?? []).map((feature) => (
+                          <View key={feature} style={styles.featureRow}>
+                            <MaterialCommunityIcons
+                              color={theme.colors.primaryStrong}
+                              name="check-circle-outline"
+                              size={18}
+                            />
+                            <Text style={styles.featureText}>{feature}</Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      {!status.has_pro_access ? (
+                        <View style={styles.trialNote}>
+                          <MaterialCommunityIcons
+                            color={theme.colors.primaryStrong}
+                            name="rocket-launch-outline"
+                            size={18}
+                          />
+                          <Text style={styles.trialNoteText}>
+                            Start with a 14-day free trial after entering
+                            payment details. Your selected plan continues after
+                            the trial unless you cancel before then.
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={styles.manageNote}>
+                          <MaterialCommunityIcons
+                            color={theme.colors.primaryStrong}
+                            name={
+                              cancellationScheduled
+                                ? "alert-circle-outline"
+                                : "swap-horizontal"
+                            }
+                            size={18}
+                          />
+                          <Text style={styles.manageNoteText}>
+                            {cancellationScheduled && accessEndsAt
+                              ? `You’ve canceled your subscription. Tap Resume subscription to keep this plan active, or pick a different billing option below before ${formatDateWithYear(accessEndsAt)}.`
+                              : "Want to switch between monthly and yearly? Confirm a plan below to update your subscription, or use Manage billing to cancel and handle payment details."}
+                          </Text>
+                        </View>
+                      )}
+
+                      <View style={styles.priceGroup}>
+                        {(plan.prices ?? []).map((price) => (
+                          <SurfaceCard
+                            key={price.interval}
+                            style={styles.priceCard}
+                            tone="light"
+                          >
+                            <View style={styles.priceHeader}>
+                              <Text style={styles.priceName}>{price.name}</Text>
+                              {price.interval === "year" &&
+                              yearlySavings(plan.prices) ? (
+                                <StatusBadge
+                                  label={`save ${yearlySavings(plan.prices)}%`}
+                                  tone="success"
+                                />
+                              ) : null}
+                            </View>
+                            <Text style={styles.priceValue}>
+                              {priceLabel(
+                                price.amount_cents,
+                                price.currency,
+                                price.interval,
+                              )}
+                            </Text>
+                            <Text style={styles.priceMeta}>
+                              {price.interval === "year"
+                                ? "Best value for annual planning."
+                                : "Flexible monthly access."}
+                            </Text>
+                            {!status.has_pro_access ? (
+                              <PrimaryButton
+                                disabled={
+                                  busyAction !== null || !price.checkout_enabled
+                                }
+                                icon="arrow-top-right"
+                                label={
+                                  busyAction === price.interval
+                                    ? "Opening checkout..."
+                                    : `Start ${price.name.toLowerCase()} trial`
+                                }
+                                onPress={() => {
+                                  void openCheckout(price.interval);
+                                }}
+                              />
+                            ) : cancellationScheduled &&
+                              currentPlanInterval === price.interval ? (
+                              <PrimaryButton
+                                disabled={busyAction !== null}
+                                icon="restore"
+                                label={
+                                  resumingSubscription
+                                    ? "Resuming..."
+                                    : `Resume ${price.name.toLowerCase()}`
+                                }
+                                onPress={() => {
+                                  void resumeSubscription();
+                                }}
+                              />
+                            ) : cancellationScheduled ? (
+                              <PrimaryButton
+                                disabled={busyAction !== null}
+                                icon="swap-horizontal"
+                                label={
+                                  busyAction ===
+                                  portalBusyKey("switch", price.interval)
+                                    ? "Switching..."
+                                    : `Switch to ${price.name.toLowerCase()}`
+                                }
+                                onPress={() => {
+                                  confirmSwitchPlan(price.interval, price.name);
+                                }}
+                              />
+                            ) : currentPlanInterval === price.interval ? (
+                              <View style={styles.currentPlanPill}>
+                                <Text style={styles.currentPlanPillLabel}>
+                                  Current plan
+                                </Text>
+                              </View>
+                            ) : (
+                              <PrimaryButton
+                                disabled={busyAction !== null}
+                                icon="swap-horizontal"
+                                label={
+                                  busyAction ===
+                                  portalBusyKey("switch", price.interval)
+                                    ? "Switching..."
+                                    : `Switch to ${price.name.toLowerCase()}`
+                                }
+                                onPress={() => {
+                                  confirmSwitchPlan(price.interval, price.name);
+                                }}
+                              />
+                            )}
+                          </SurfaceCard>
+                        ))}
+                      </View>
+                    </>
+                  ) : (
+                    <View style={styles.limitGroup}>
+                      <Text style={styles.limitText}>
+                        {plan.limits?.pay_schedules ?? 1} paycheck schedule,{" "}
+                        {plan.limits?.bills ?? 12} bills,{" "}
+                        {plan.limits?.savings_goals ?? 1} goal, and a{" "}
+                        {plan.limits?.forecast_days ?? 90}-day window.
+                      </Text>
+                      <Text style={styles.limitSubtext}>
+                        Enough to build the core system, with tighter limits on
+                        how far and how broadly you can plan.
                       </Text>
                     </View>
                   )}
-
-                  <View style={styles.priceGroup}>
-                    {(plan.prices ?? []).map((price) => (
-                      <SurfaceCard
-                        key={price.interval}
-                        style={styles.priceCard}
-                        tone="light"
-                      >
-                        <View style={styles.priceHeader}>
-                          <Text style={styles.priceName}>{price.name}</Text>
-                          {price.interval === "year" &&
-                          yearlySavings(plan.prices) ? (
-                            <StatusBadge
-                              label={`save ${yearlySavings(plan.prices)}%`}
-                              tone="success"
-                            />
-                          ) : null}
-                        </View>
-                        <Text style={styles.priceValue}>
-                          {priceLabel(
-                            price.amount_cents,
-                            price.currency,
-                            price.interval,
-                          )}
-                        </Text>
-                        <Text style={styles.priceMeta}>
-                          {price.interval === "year"
-                            ? "Best value for annual planning."
-                            : "Flexible monthly access."}
-                        </Text>
-                        {!status.has_pro_access ? (
-                          <PrimaryButton
-                            disabled={
-                              busyAction !== null || !price.checkout_enabled
-                            }
-                            icon="arrow-top-right"
-                            label={
-                              busyAction === price.interval
-                                ? "Opening checkout..."
-                                : `Start ${price.name.toLowerCase()} trial`
-                            }
-                            onPress={() => {
-                              void openCheckout(price.interval);
-                            }}
-                          />
-                        ) : cancellationScheduled &&
-                          currentPlanInterval === price.interval ? (
-                          <PrimaryButton
-                            disabled={busyAction !== null}
-                            icon="restore"
-                            label={
-                              resumingSubscription
-                                ? "Resuming..."
-                                : `Resume ${price.name.toLowerCase()}`
-                            }
-                            onPress={() => {
-                              void resumeSubscription();
-                            }}
-                          />
-                        ) : cancellationScheduled ? (
-                          <PrimaryButton
-                            disabled={busyAction !== null}
-                            icon="swap-horizontal"
-                            label={
-                              busyAction ===
-                              portalBusyKey("switch", price.interval)
-                                ? "Switching..."
-                                : `Switch to ${price.name.toLowerCase()}`
-                            }
-                            onPress={() => {
-                              confirmSwitchPlan(price.interval, price.name);
-                            }}
-                          />
-                        ) : currentPlanInterval === price.interval ? (
-                          <View style={styles.currentPlanPill}>
-                            <Text style={styles.currentPlanPillLabel}>
-                              Current plan
-                            </Text>
-                          </View>
-                        ) : (
-                          <PrimaryButton
-                            disabled={busyAction !== null}
-                            icon="swap-horizontal"
-                            label={
-                              busyAction ===
-                              portalBusyKey("switch", price.interval)
-                                ? "Switching..."
-                                : `Switch to ${price.name.toLowerCase()}`
-                            }
-                            onPress={() => {
-                              confirmSwitchPlan(price.interval, price.name);
-                            }}
-                          />
-                        )}
-                      </SurfaceCard>
-                    ))}
-                  </View>
-                </>
-              ) : (
-                <View style={styles.limitGroup}>
-                  <Text style={styles.limitText}>
-                    {plan.limits?.pay_schedules ?? 1} paycheck schedule,{" "}
-                    {plan.limits?.bills ?? 12} bills,{" "}
-                    {plan.limits?.savings_goals ?? 1} goal, and a{" "}
-                    {plan.limits?.forecast_days ?? 90}-day window.
-                  </Text>
-                  <Text style={styles.limitSubtext}>
-                    Enough to build the core system, with tighter limits on how
-                    far and how broadly you can plan.
-                  </Text>
-                </View>
-              )}
-            </SurfaceCard>
-          ))}
+                </SurfaceCard>
+              ))
+            : null}
         </>
       ) : null}
     </AppScreen>
