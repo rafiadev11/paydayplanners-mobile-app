@@ -104,16 +104,26 @@ function scheduledAccessEnd(status: BillingStatus) {
   return status.subscription?.ends_at ?? null;
 }
 
+function hasManagedBillingAccess(status: BillingStatus) {
+  return status.has_active_subscription || status.on_trial;
+}
+
+function hasComplimentaryOnlyAccess(status: BillingStatus) {
+  return status.access_source === "complimentary";
+}
+
 function hasScheduledCancellation(status: BillingStatus) {
-  return Boolean(status.has_pro_access && scheduledAccessEnd(status));
+  return Boolean(hasManagedBillingAccess(status) && scheduledAccessEnd(status));
 }
 
 function statusSnapshot(status: BillingStatus | null) {
   return JSON.stringify({
     plan: status?.plan ?? null,
     has_pro_access: status?.has_pro_access ?? null,
+    has_complimentary_access: status?.has_complimentary_access ?? null,
     has_active_subscription: status?.has_active_subscription ?? null,
     on_trial: status?.on_trial ?? null,
+    access_source: status?.access_source ?? null,
     subscription_status: status?.subscription_status ?? null,
     current_interval: status?.subscription?.current_interval ?? null,
     current_amount_cents: status?.subscription?.current_amount_cents ?? null,
@@ -137,6 +147,10 @@ function resumeBusyKey(interval?: "month" | "year") {
 function currentAccessBody(status: BillingStatus) {
   if (hasScheduledCancellation(status)) {
     return `Your subscription is canceled. You’ll keep Pro until ${formatDateWithYear(scheduledAccessEnd(status) ?? "")}, then your account returns to Free.`;
+  }
+
+  if (hasComplimentaryOnlyAccess(status)) {
+    return "Your account has complimentary Pro access. No Stripe subscription is required, and the full planning horizon is unlocked.";
   }
 
   const billingLabel = currentBillingLabel(status);
@@ -372,6 +386,10 @@ export default function BillingScreen() {
   const reasons = status ? upgradeReasons(status) : [];
   const currentBilling = status ? currentBillingLabel(status) : null;
   const currentPlanInterval = status?.subscription?.current_interval ?? null;
+  const complimentaryAccess = status
+    ? hasComplimentaryOnlyAccess(status)
+    : false;
+  const managedBillingAccess = status ? hasManagedBillingAccess(status) : false;
   const cancellationScheduled = status
     ? hasScheduledCancellation(status)
     : false;
@@ -408,7 +426,7 @@ export default function BillingScreen() {
     <AppScreen contentContainerStyle={styles.screenContent} topInset={false}>
       <ScreenHeader
         eyebrow="Billing"
-        subtitle="Unlock the full planning horizon and manage your subscription."
+        subtitle="Review your access, upgrade options, and subscription details."
         title="Plans"
       />
 
@@ -443,7 +461,11 @@ export default function BillingScreen() {
               <View style={styles.heroCopy}>
                 <Text style={styles.heroEyebrow}>Current access</Text>
                 <Text style={styles.heroTitle}>
-                  {status.has_pro_access ? "PaydayPlanner Pro" : "Free plan"}
+                  {complimentaryAccess
+                    ? "Complimentary Pro"
+                    : status.has_pro_access
+                      ? "PaydayPlanner Pro"
+                      : "Free plan"}
                 </Text>
                 <Text style={styles.heroBody}>{currentAccessBody(status)}</Text>
               </View>
@@ -451,9 +473,11 @@ export default function BillingScreen() {
                 label={
                   cancellationScheduled
                     ? "canceled"
-                    : status.on_trial
-                      ? "trial"
-                      : status.plan
+                    : complimentaryAccess
+                      ? "complimentary"
+                      : status.on_trial
+                        ? "trial"
+                        : status.plan
                 }
                 tone={
                   cancellationScheduled
@@ -481,7 +505,19 @@ export default function BillingScreen() {
                   </Text>
                 </View>
               </View>
-            ) : status.has_active_subscription || status.on_trial ? (
+            ) : complimentaryAccess ? (
+              <View style={styles.heroMeta}>
+                <View style={styles.heroMetaItem}>
+                  <Text style={styles.heroMetaLabel}>Access</Text>
+                  <Text style={styles.heroMetaValue}>Complimentary Pro</Text>
+                </View>
+                <View style={styles.heroMetaDivider} />
+                <View style={styles.heroMetaItem}>
+                  <Text style={styles.heroMetaLabel}>Billing</Text>
+                  <Text style={styles.heroMetaValue}>No subscription</Text>
+                </View>
+              </View>
+            ) : managedBillingAccess ? (
               <View style={styles.heroMeta}>
                 <View style={styles.heroMetaItem}>
                   <Text style={styles.heroMetaLabel}>
@@ -519,7 +555,13 @@ export default function BillingScreen() {
                   Choose monthly or yearly below to start your 14-day trial.
                 </Text>
               ) : null}
-              {status.has_active_subscription || status.on_trial ? (
+              {complimentaryAccess ? (
+                <Text style={styles.heroReassurance}>
+                  Complimentary access is active on this account. No payment or
+                  subscription management is needed.
+                </Text>
+              ) : null}
+              {managedBillingAccess ? (
                 cancellationScheduled ? (
                   <>
                     <PrimaryButton
@@ -556,7 +598,7 @@ export default function BillingScreen() {
                   />
                 )
               ) : null}
-              {status.has_active_subscription || status.on_trial ? (
+              {managedBillingAccess ? (
                 <Text style={styles.heroReassurance}>
                   {cancellationScheduled && accessEndsAt
                     ? `Resume subscription keeps your current plan active. Open Manage billing before ${formatDateWithYear(accessEndsAt)} if you want to switch plans instead.`
@@ -646,6 +688,18 @@ export default function BillingScreen() {
                         unless you cancel before then.
                       </Text>
                     </View>
+                  ) : complimentaryAccess ? (
+                    <View style={styles.manageNote}>
+                      <MaterialCommunityIcons
+                        color={theme.colors.primaryStrong}
+                        name="gift-outline"
+                        size={18}
+                      />
+                      <Text style={styles.manageNoteText}>
+                        This account has complimentary Pro access. You can use
+                        all Pro features without starting a Stripe subscription.
+                      </Text>
+                    </View>
                   ) : (
                     <View style={styles.manageNote}>
                       <MaterialCommunityIcons
@@ -709,6 +763,12 @@ export default function BillingScreen() {
                               void openCheckout(price.interval);
                             }}
                           />
+                        ) : complimentaryAccess ? (
+                          <View style={styles.currentPlanPill}>
+                            <Text style={styles.currentPlanPillLabel}>
+                              Included
+                            </Text>
+                          </View>
                         ) : cancellationScheduled &&
                           currentPlanInterval === price.interval ? (
                           <PrimaryButton

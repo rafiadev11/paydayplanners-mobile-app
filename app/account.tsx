@@ -28,6 +28,7 @@ import { Field, StatusBadge, SurfaceCard } from "@shared/ui/primitives";
 import { theme, withAlpha } from "@shared/ui/theme";
 
 function planLabel(user: User) {
+  if (user.billing?.has_complimentary_access) return "Complimentary Pro";
   if (user.billing?.on_trial) return "Pro trial";
   if (user.billing?.has_pro_access) return "Pro";
 
