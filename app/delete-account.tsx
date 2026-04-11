@@ -142,18 +142,7 @@ export default function DeleteAccountScreen() {
   const canDelete =
     normalizedConfirmation.length > 0 &&
     normalizedConfirmation === normalizedEmail;
-  const hasPaidAccess = Boolean(
-    user?.billing?.has_active_subscription || user?.billing?.on_trial,
-  );
-  const accessLabel = useMemo(() => {
-    if (!user?.billing) return "Free";
-    if (user.billing.has_complimentary_access) return "Complimentary Pro";
-    if (user.billing.on_trial) return "Pro trial";
-    if (user.billing.has_active_subscription) return "Pro";
-    if (user.billing.has_pro_access) return "Pro access";
-
-    return "Free";
-  }, [user?.billing]);
+  const accessLabel = useMemo(() => "Full access", []);
 
   useEffect(() => {
     if (!navigationState?.key) {
@@ -194,9 +183,7 @@ export default function DeleteAccountScreen() {
   const promptDeletion = () => {
     Alert.alert(
       "Delete account permanently?",
-      hasPaidAccess
-        ? "Your PaydayPlanner account and planning data will be permanently deleted, and your paid subscription will be canceled immediately. This cannot be undone."
-        : "Your PaydayPlanner account and planning data will be permanently deleted. This cannot be undone.",
+      "Your PaydayPlanner account and planning data will be permanently deleted. This cannot be undone.",
       [
         {
           style: "cancel",
@@ -267,13 +254,9 @@ export default function DeleteAccountScreen() {
             title="All planning data is removed"
           />
           <DangerRow
-            body={
-              hasPaidAccess
-                ? "Your Pro subscription or trial is ended immediately as part of deletion."
-                : "There is no active paid subscription on this account right now."
-            }
+            body="Any saved session tokens and app access for this account stop immediately as part of deletion."
             icon="credit-card-off-outline"
-            title="Billing access stops now"
+            title="Account access stops now"
           />
           <DangerRow
             body="There is no undo, restore link, or recovery path after you confirm."

@@ -10,8 +10,6 @@ import {
   View,
 } from "react-native";
 
-import { useAuth } from "@features/auth/auth-context";
-import { BillingBanner } from "@features/billing/components";
 import {
   fetchBillOccurrences,
   fetchBills,
@@ -137,17 +135,13 @@ function BillsSummaryCard({
   dueIn14Days,
   uncoveredCount,
   monthlyLoad,
-  canCreateBill,
   onAddBill,
-  onOpenBilling,
 }: {
   nextDue: BillOccurrence | null;
   dueIn14Days: number;
   uncoveredCount: number;
   monthlyLoad: number;
-  canCreateBill: boolean;
   onAddBill: () => void;
-  onOpenBilling: () => void;
 }) {
   return (
     <SurfaceCard tone="dark" style={styles.summaryCard}>
@@ -193,9 +187,9 @@ function BillsSummaryCard({
 
       <View style={styles.summaryActions}>
         <PrimaryButton
-          icon={canCreateBill ? "receipt-text-plus-outline" : "crown-outline"}
-          label={canCreateBill ? "Add bill" : "Unlock Pro"}
-          onPress={canCreateBill ? onAddBill : onOpenBilling}
+          icon="receipt-text-plus-outline"
+          label="Add bill"
+          onPress={onAddBill}
         />
       </View>
     </SurfaceCard>
@@ -266,7 +260,6 @@ function BillCard({
 
 export default function BillsScreen() {
   const router = useRouter();
-  const { user } = useAuth();
   const [bills, setBills] = useState<Bill[]>([]);
   const [occurrences, setOccurrences] = useState<BillOccurrence[]>([]);
   const [selectedFilter, setSelectedFilter] = useState<BillFilter>("all");
@@ -274,29 +267,26 @@ export default function BillsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(
-    async (refresh = false) => {
-      if (refresh) setRefreshing(true);
-      else setLoading(true);
+  const load = useCallback(async (refresh = false) => {
+    if (refresh) setRefreshing(true);
+    else setLoading(true);
 
-      try {
-        const [nextBills, nextOccurrences] = await Promise.all([
-          fetchBills(),
-          fetchBillOccurrences(user?.billing?.has_pro_access ? 365 : 90),
-        ]);
+    try {
+      const [nextBills, nextOccurrences] = await Promise.all([
+        fetchBills(),
+        fetchBillOccurrences(365),
+      ]);
 
-        setBills(nextBills);
-        setOccurrences(nextOccurrences);
-        setError(null);
-      } catch (nextError) {
-        setError(getApiErrorMessage(nextError));
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [user?.billing?.has_pro_access],
-  );
+      setBills(nextBills);
+      setOccurrences(nextOccurrences);
+      setError(null);
+    } catch (nextError) {
+      setError(getApiErrorMessage(nextError));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -326,8 +316,6 @@ export default function BillsScreen() {
       occurrence.status === "overdue" ||
       Number(occurrence.unfunded_amount ?? 0) > 0,
   );
-  const canCreateBill =
-    Boolean(user?.billing?.has_pro_access) || bills.length < 12;
 
   const filteredBills =
     selectedFilter === "all"
@@ -374,20 +362,12 @@ export default function BillsScreen() {
         />
       ) : (
         <>
-          {bills.length > 0 ? (
-            <BillingBanner billing={user?.billing} compact />
-          ) : null}
-
           <BillsSummaryCard
-            canCreateBill={canCreateBill}
             dueIn14Days={dueIn14Days}
             monthlyLoad={monthlyRecurringLoad(bills)}
             nextDue={nextDue}
             onAddBill={() => {
               router.push("/bills/new");
-            }}
-            onOpenBilling={() => {
-              router.push("/billing");
             }}
             uncoveredCount={
               needsAttention.filter(
@@ -467,12 +447,10 @@ export default function BillsScreen() {
           <SectionTitle
             action={
               <SecondaryButton
-                icon={
-                  canCreateBill ? "receipt-text-plus-outline" : "crown-outline"
-                }
-                label={canCreateBill ? "Add bill" : "Unlock Pro"}
+                icon="receipt-text-plus-outline"
+                label="Add bill"
                 onPress={() => {
-                  router.push(canCreateBill ? "/bills/new" : "/billing");
+                  router.push("/bills/new");
                 }}
               />
             }

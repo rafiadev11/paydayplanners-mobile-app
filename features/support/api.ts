@@ -1,7 +1,6 @@
 import { api, type ApiRequestConfig } from "@shared/api/client";
 
 export type SupportTopic =
-  | "billing"
   | "bug_report"
   | "feature_request"
   | "account"

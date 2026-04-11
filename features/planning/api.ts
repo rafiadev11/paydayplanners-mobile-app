@@ -241,7 +241,7 @@ function item<T>(payload: ItemEnvelope<T> | T) {
   return payload as T;
 }
 
-function buildWindow(days = 90) {
+function buildWindow(days = 365) {
   const startDate = todayInAppTimezone();
 
   return {
@@ -255,7 +255,7 @@ export async function fetchDashboard() {
   return data;
 }
 
-export async function fetchForecast(days = 90) {
+export async function fetchForecast(days = 365) {
   const { data } = await api.get<ForecastResponse>("/api/v1/forecast", {
     params: buildWindow(days),
   });
@@ -311,7 +311,7 @@ export async function fetchSavingsGoal(id: number | string) {
   return item(data);
 }
 
-export async function fetchPaycheckOccurrences(days = 90) {
+export async function fetchPaycheckOccurrences(days = 365) {
   const { data } = await api.get<CollectionEnvelope<PaycheckOccurrence>>(
     "/api/v1/paycheck-occurrences",
     {
@@ -321,7 +321,7 @@ export async function fetchPaycheckOccurrences(days = 90) {
   return collection(data);
 }
 
-export async function fetchBillOccurrences(days = 90) {
+export async function fetchBillOccurrences(days = 365) {
   const { data } = await api.get<CollectionEnvelope<BillOccurrence>>(
     "/api/v1/bill-occurrences",
     {

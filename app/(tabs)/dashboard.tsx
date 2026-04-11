@@ -16,11 +16,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
-import type { BillingSummary } from "@features/billing/types";
 import {
-  fetchBills,
   fetchDashboard,
-  fetchPaySchedules,
   type BillOccurrence,
   type DashboardResponse,
 } from "@features/planning/api";
@@ -188,9 +185,7 @@ function AccountDrawerItem({
 function AccountDrawer({
   visible,
   userName,
-  billing,
   onClose,
-  onOpenBilling,
   onOpenAccount,
   onOpenHelpAndLegal,
   onOpenDeleteAccount,
@@ -198,9 +193,7 @@ function AccountDrawer({
 }: {
   visible: boolean;
   userName?: string | null;
-  billing?: BillingSummary | null;
   onClose: () => void;
-  onOpenBilling: () => void;
   onOpenAccount: () => void;
   onOpenHelpAndLegal: () => void;
   onOpenDeleteAccount: () => void;
@@ -302,22 +295,6 @@ function AccountDrawer({
             </View>
 
             <View style={styles.drawerGroup}>
-              <AccountDrawerItem
-                icon="credit-card-outline"
-                onPress={onOpenBilling}
-                subtitle={
-                  billing?.has_complimentary_access
-                    ? "View your current access."
-                    : billing?.has_pro_access
-                      ? "Manage your plan, trial, and subscription details."
-                      : "Compare plans and review your current access."
-                }
-                title={
-                  billing?.has_complimentary_access
-                    ? "My plan"
-                    : "My subscription"
-                }
-              />
               <AccountDrawerItem
                 icon="account-edit-outline"
                 onPress={onOpenAccount}
@@ -429,20 +406,14 @@ function BillList({
 
 function NextPaycheckCard({
   dashboard,
-  canCreatePaySchedule,
-  canCreateBill,
   onOpenPlan,
   onAddPaycheck,
   onAddBill,
-  onOpenBilling,
 }: {
   dashboard: DashboardResponse;
-  canCreatePaySchedule: boolean;
-  canCreateBill: boolean;
   onOpenPlan: () => void;
   onAddPaycheck: () => void;
   onAddBill: () => void;
-  onOpenBilling: () => void;
 }) {
   const nextPaycheck = dashboard.next_paycheck;
   const dueCount = dashboard.bills_due_before_next_paycheck.length;
@@ -470,14 +441,14 @@ function NextPaycheckCard({
         </View>
         <View style={styles.primaryActions}>
           <PrimaryButton
-            icon={canCreatePaySchedule ? "cash-plus" : "crown-outline"}
-            label={canCreatePaySchedule ? "Add paycheck" : "Unlock Pro"}
-            onPress={canCreatePaySchedule ? onAddPaycheck : onOpenBilling}
+            icon="cash-plus"
+            label="Add paycheck"
+            onPress={onAddPaycheck}
           />
           <SecondaryButton
             icon="receipt-text-plus-outline"
-            label={canCreateBill ? "Add bill" : "Unlock Pro"}
-            onPress={canCreateBill ? onAddBill : onOpenBilling}
+            label="Add bill"
+            onPress={onAddBill}
           />
         </View>
       </SurfaceCard>
@@ -566,9 +537,9 @@ function NextPaycheckCard({
           onPress={onOpenPlan}
         />
         <SecondaryButton
-          icon={canCreateBill ? "receipt-text-plus-outline" : "crown-outline"}
-          label={canCreateBill ? "Add bill" : "Unlock Pro"}
-          onPress={canCreateBill ? onAddBill : onOpenBilling}
+          icon="receipt-text-plus-outline"
+          label="Add bill"
+          onPress={onAddBill}
         />
       </View>
     </SurfaceCard>
@@ -579,19 +550,10 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
-  const [payScheduleCount, setPayScheduleCount] = useState(0);
-  const [billCount, setBillCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const canCreateSavingsGoal =
-    Boolean(user?.billing?.has_pro_access) ||
-    (dashboard?.savings_goals.length ?? 0) < 1;
-  const canCreatePaySchedule =
-    Boolean(user?.billing?.has_pro_access) || payScheduleCount < 1;
-  const canCreateBill =
-    Boolean(user?.billing?.has_pro_access) || billCount < 12;
 
   const loadDashboard = useCallback(
     async (refresh = false) => {
@@ -601,14 +563,8 @@ export default function DashboardScreen() {
       else setLoading(true);
 
       try {
-        const [payload, schedules, bills] = await Promise.all([
-          fetchDashboard(),
-          fetchPaySchedules(),
-          fetchBills(),
-        ]);
+        const payload = await fetchDashboard();
         setDashboard(payload);
-        setPayScheduleCount(schedules.length);
-        setBillCount(bills.length);
         setError(null);
       } catch (nextError) {
         setError(getApiErrorMessage(nextError));
@@ -625,11 +581,6 @@ export default function DashboardScreen() {
       void loadDashboard();
     }, [loadDashboard]),
   );
-
-  const openBilling = useCallback(() => {
-    setDrawerOpen(false);
-    router.push("/billing");
-  }, [router]);
 
   const openAccount = useCallback(() => {
     setDrawerOpen(false);
@@ -688,8 +639,6 @@ export default function DashboardScreen() {
         ) : dashboard ? (
           <>
             <NextPaycheckCard
-              canCreateBill={canCreateBill}
-              canCreatePaySchedule={canCreatePaySchedule}
               dashboard={dashboard}
               onAddBill={() => {
                 router.push("/bills/new");
@@ -697,7 +646,6 @@ export default function DashboardScreen() {
               onAddPaycheck={() => {
                 router.push("/pay-schedules/new");
               }}
-              onOpenBilling={openBilling}
               onOpenPlan={() => {
                 router.push("/plan");
               }}
@@ -849,12 +797,10 @@ export default function DashboardScreen() {
                   </View>
                 </View>
                 <PrimaryButton
-                  icon={
-                    canCreateSavingsGoal ? "bullseye-arrow" : "crown-outline"
-                  }
-                  label={canCreateSavingsGoal ? "Open goals" : "Unlock Pro"}
+                  icon="bullseye-arrow"
+                  label="Open goals"
                   onPress={() => {
-                    router.push(canCreateSavingsGoal ? "/goals" : "/billing");
+                    router.push("/goals");
                   }}
                 />
               </SurfaceCard>
@@ -864,12 +810,10 @@ export default function DashboardScreen() {
       </AppScreen>
 
       <AccountDrawer
-        billing={user?.billing}
         onClose={() => {
           setDrawerOpen(false);
         }}
         onOpenAccount={openAccount}
-        onOpenBilling={openBilling}
         onOpenHelpAndLegal={openHelpAndLegal}
         onOpenDeleteAccount={openDeleteAccount}
         onSignOut={handleSignOut}

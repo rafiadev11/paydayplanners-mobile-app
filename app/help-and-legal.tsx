@@ -35,11 +35,6 @@ const topicOptions: {
   value: SupportTopic;
 }[] = [
   {
-    label: "Billing",
-    subtitle: "Trials, subscriptions, and payments.",
-    value: "billing",
-  },
-  {
     label: "Bug report",
     subtitle: "Something feels broken or inaccurate.",
     value: "bug_report",
@@ -146,7 +141,7 @@ export default function HelpAndLegalScreen() {
   const navigationState = useRootNavigationState();
   const insets = useSafeAreaInsets();
   const { ready, user } = useAuth();
-  const [topic, setTopic] = useState<SupportTopic>("billing");
+  const [topic, setTopic] = useState<SupportTopic>("account");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);

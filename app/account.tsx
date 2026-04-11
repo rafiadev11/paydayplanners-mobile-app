@@ -17,7 +17,6 @@ import {
   resendVerificationEmail,
   updatePassword,
   updateProfile,
-  type User,
 } from "@features/auth/api";
 import { useAuth } from "@features/auth/auth-context";
 import { useBillReminders } from "@features/notifications/bill-reminder-context";
@@ -26,14 +25,6 @@ import { getApiErrorMessage } from "@shared/lib/api-error";
 import { formatDateWithYear } from "@shared/lib/format";
 import { Field, StatusBadge, SurfaceCard } from "@shared/ui/primitives";
 import { theme, withAlpha } from "@shared/ui/theme";
-
-function planLabel(user: User) {
-  if (user.billing?.has_complimentary_access) return "Complimentary Pro";
-  if (user.billing?.on_trial) return "Pro trial";
-  if (user.billing?.has_pro_access) return "Pro";
-
-  return "Free";
-}
 
 function timezoneLabel(value: string | null | undefined) {
   if (!value) return "Auto";
@@ -484,7 +475,7 @@ export default function AccountInfoScreen() {
 
         <SurfaceCard tone="dark" style={styles.heroCard}>
           <View style={styles.heroBadgeRow}>
-            <StatusBadge label={planLabel(user)} tone="accent" />
+            <StatusBadge label="Full access" tone="accent" />
             <StatusBadge
               label={
                 user.email_verified_at ? "Email verified" : "Needs verification"
@@ -508,7 +499,7 @@ export default function AccountInfoScreen() {
               label="Timezone"
               value={timezoneLabel(user.timezone)}
             />
-            <SummaryTile label="Plan" value={planLabel(user)} />
+            <SummaryTile label="Access" value="Full" />
             <SummaryTile
               label="Sign-in email"
               value={user.email_verified_at ? "Confirmed" : "Pending"}
