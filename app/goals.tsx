@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { RefreshControl, StyleSheet, Text, View } from "react-native";
 
-import { useAuth } from "@features/auth/auth-context";
 import { fetchSavingsGoals, type SavingsGoal } from "@features/planning/api";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
@@ -50,14 +49,10 @@ function progressRatio(goal: SavingsGoal) {
 
 function GoalsSummaryCard({
   goals,
-  canCreateSavingsGoal,
   onOpenNewGoal,
-  onOpenBilling,
 }: {
   goals: SavingsGoal[];
-  canCreateSavingsGoal: boolean;
   onOpenNewGoal: () => void;
-  onOpenBilling: () => void;
 }) {
   const activeGoals = goals.filter((goal) => goal.is_active);
   const totalRemaining = activeGoals.reduce(
@@ -83,9 +78,9 @@ function GoalsSummaryCard({
           </Text>
         </View>
         <PrimaryButton
-          icon={canCreateSavingsGoal ? "bullseye-arrow" : "crown-outline"}
-          label={canCreateSavingsGoal ? "Add goal" : "Unlock Pro"}
-          onPress={canCreateSavingsGoal ? onOpenNewGoal : onOpenBilling}
+          icon="bullseye-arrow"
+          label="Add goal"
+          onPress={onOpenNewGoal}
         />
       </View>
 
@@ -201,7 +196,6 @@ function GoalCard({ goal, onEdit }: { goal: SavingsGoal; onEdit: () => void }) {
 
 export default function GoalsScreen() {
   const router = useRouter();
-  const { user } = useAuth();
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -236,9 +230,6 @@ export default function GoalsScreen() {
   const pausedGoals = goals.filter(
     (goal) => !goal.is_active && !goal.is_completed,
   );
-  const incompleteGoalCount = goals.filter((goal) => !goal.is_completed).length;
-  const canCreateSavingsGoal =
-    Boolean(user?.billing?.has_pro_access) || incompleteGoalCount < 1;
 
   return (
     <AppScreen
@@ -272,11 +263,7 @@ export default function GoalsScreen() {
       ) : (
         <>
           <GoalsSummaryCard
-            canCreateSavingsGoal={canCreateSavingsGoal}
             goals={goals}
-            onOpenBilling={() => {
-              router.push("/billing");
-            }}
             onOpenNewGoal={() => {
               router.push("/savings-goals/new");
             }}

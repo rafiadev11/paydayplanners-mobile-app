@@ -10,8 +10,6 @@ import {
   View,
 } from "react-native";
 
-import { useAuth } from "@features/auth/auth-context";
-import { BillingBanner } from "@features/billing/components";
 import {
   fetchPaySchedules,
   fetchPaycheckOccurrences,
@@ -26,7 +24,6 @@ import {
   formatInteger,
   formatLongWeekday,
 } from "@shared/lib/format";
-import { addDaysToIsoDate, todayInAppTimezone } from "@shared/lib/timezone";
 import {
   AppScreen,
   EmptyState,
@@ -94,10 +91,6 @@ function dayDistanceLabel(value: string) {
   }
 
   return `In ${distance} days`;
-}
-
-function windowEndLabel(days: number) {
-  return formatDateWithYear(addDaysToIsoDate(todayInAppTimezone(), days));
 }
 
 function timingSummary(
@@ -171,16 +164,12 @@ function NextIncomeCard({
   nextPaycheck,
   activeSources,
   schedulesCount,
-  canCreateSchedule,
   onAddPaycheck,
-  onOpenBilling,
 }: {
   nextPaycheck: PaycheckOccurrence | null;
   activeSources: number;
   schedulesCount: number;
-  canCreateSchedule: boolean;
   onAddPaycheck: () => void;
-  onOpenBilling: () => void;
 }) {
   if (!nextPaycheck) {
     return (
@@ -193,9 +182,9 @@ function NextIncomeCard({
         </Text>
         <View style={styles.nextCardActions}>
           <PrimaryButton
-            icon={canCreateSchedule ? "cash-plus" : "crown-outline"}
-            label={canCreateSchedule ? "Add paycheck" : "Unlock Pro"}
-            onPress={canCreateSchedule ? onAddPaycheck : onOpenBilling}
+            icon="cash-plus"
+            label="Add paycheck"
+            onPress={onAddPaycheck}
           />
         </View>
       </SurfaceCard>
@@ -247,9 +236,9 @@ function NextIncomeCard({
 
       <View style={styles.nextCardActions}>
         <PrimaryButton
-          icon={canCreateSchedule ? "cash-plus" : "crown-outline"}
-          label={canCreateSchedule ? "Add paycheck" : "Unlock Pro"}
-          onPress={canCreateSchedule ? onAddPaycheck : onOpenBilling}
+          icon="cash-plus"
+          label="Add paycheck"
+          onPress={onAddPaycheck}
         />
       </View>
     </SurfaceCard>
@@ -382,7 +371,6 @@ function MonthSection({
 
 export default function PaychecksScreen() {
   const router = useRouter();
-  const { user } = useAuth();
   const [schedules, setSchedules] = useState<PaySchedule[]>([]);
   const [occurrences, setOccurrences] = useState<PaycheckOccurrence[]>([]);
   const [expandedMonths, setExpandedMonths] = useState<
@@ -392,29 +380,26 @@ export default function PaychecksScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(
-    async (refresh = false) => {
-      if (refresh) setRefreshing(true);
-      else setLoading(true);
+  const load = useCallback(async (refresh = false) => {
+    if (refresh) setRefreshing(true);
+    else setLoading(true);
 
-      try {
-        const [nextSchedules, nextOccurrences] = await Promise.all([
-          fetchPaySchedules(),
-          fetchPaycheckOccurrences(user?.billing?.has_pro_access ? 365 : 90),
-        ]);
+    try {
+      const [nextSchedules, nextOccurrences] = await Promise.all([
+        fetchPaySchedules(),
+        fetchPaycheckOccurrences(365),
+      ]);
 
-        setSchedules(nextSchedules);
-        setOccurrences(nextOccurrences);
-        setError(null);
-      } catch (nextError) {
-        setError(getApiErrorMessage(nextError));
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [user?.billing?.has_pro_access],
-  );
+      setSchedules(nextSchedules);
+      setOccurrences(nextOccurrences);
+      setError(null);
+    } catch (nextError) {
+      setError(getApiErrorMessage(nextError));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -430,10 +415,6 @@ export default function PaychecksScreen() {
   const monthGroups = buildMonthGroups(occurrences);
   const nextPaycheck = occurrences[0] ?? null;
   const activeSchedules = schedules.filter((schedule) => schedule.is_active);
-  const canCreateSchedule =
-    Boolean(user?.billing?.has_pro_access) || schedules.length < 1;
-  const hasProAccess = Boolean(user?.billing?.has_pro_access);
-  const freeWindowEnd = windowEndLabel(90);
 
   return (
     <AppScreen
@@ -465,19 +446,11 @@ export default function PaychecksScreen() {
         />
       ) : (
         <>
-          {schedules.length > 0 && occurrences.length > 0 ? (
-            <BillingBanner billing={user?.billing} compact />
-          ) : null}
-
           <NextIncomeCard
             activeSources={activeSchedules.length}
-            canCreateSchedule={canCreateSchedule}
             nextPaycheck={nextPaycheck}
             onAddPaycheck={() => {
               router.push("/pay-schedules/new");
-            }}
-            onOpenBilling={() => {
-              router.push("/billing");
             }}
             schedulesCount={schedules.length}
           />
@@ -486,12 +459,10 @@ export default function PaychecksScreen() {
             action={
               schedules.length ? (
                 <SecondaryButton
-                  icon={canCreateSchedule ? "cash-plus" : "crown-outline"}
-                  label={canCreateSchedule ? "Add source" : "Unlock Pro"}
+                  icon="cash-plus"
+                  label="Add source"
                   onPress={() => {
-                    router.push(
-                      canCreateSchedule ? "/pay-schedules/new" : "/billing",
-                    );
+                    router.push("/pay-schedules/new");
                   }}
                 />
               ) : undefined
@@ -557,28 +528,6 @@ export default function PaychecksScreen() {
               title="Nothing upcoming"
             />
           )}
-
-          {!hasProAccess && schedules.length > 0 ? (
-            <SurfaceCard tone="accent" style={styles.freeWindowCard}>
-              <Text style={styles.freeWindowEyebrow}>Free window</Text>
-              <Text style={styles.freeWindowTitle}>
-                Paycheck dates show through {freeWindowEnd}
-              </Text>
-              <Text style={styles.freeWindowBody}>
-                Free includes the next 90 days of paycheck dates. Upgrade to Pro
-                to keep scanning the rest of your 12-month income timeline.
-              </Text>
-              <View style={styles.freeWindowActions}>
-                <PrimaryButton
-                  icon="crown-outline"
-                  label="Unlock Pro"
-                  onPress={() => {
-                    router.push("/billing");
-                  }}
-                />
-              </View>
-            </SurfaceCard>
-          ) : null}
         </>
       )}
     </AppScreen>

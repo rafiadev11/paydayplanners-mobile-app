@@ -11,8 +11,6 @@ import {
   View,
 } from "react-native";
 
-import { useAuth } from "@features/auth/auth-context";
-import { BillingBanner } from "@features/billing/components";
 import {
   fetchForecast,
   type ForecastPaycheck,
@@ -79,8 +77,8 @@ function paycheckTone(paycheck: ForecastPaycheck) {
   return "light" as const;
 }
 
-function forecastLabel(hasProAccess: boolean | undefined) {
-  return hasProAccess ? "12-month forecast" : "90-day forecast";
+function forecastLabel() {
+  return "12-month forecast";
 }
 
 function monthKey(value: string) {
@@ -406,7 +404,6 @@ function MonthSection({
 
 export default function PlanScreen() {
   const router = useRouter();
-  const { user } = useAuth();
   const [forecast, setForecast] = useState<ForecastResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -415,28 +412,23 @@ export default function PlanScreen() {
   const [expandedMonths, setExpandedMonths] = useState<
     Record<string, boolean | undefined>
   >({});
-  const activeForecastLabel = forecastLabel(user?.billing?.has_pro_access);
+  const activeForecastLabel = forecastLabel();
 
-  const loadForecast = useCallback(
-    async (refresh = false) => {
-      if (refresh) setRefreshing(true);
-      else setLoading(true);
+  const loadForecast = useCallback(async (refresh = false) => {
+    if (refresh) setRefreshing(true);
+    else setLoading(true);
 
-      try {
-        const payload = await fetchForecast(
-          user?.billing?.has_pro_access ? 365 : 90,
-        );
-        setForecast(payload);
-        setError(null);
-      } catch (nextError) {
-        setError(getApiErrorMessage(nextError));
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [user?.billing?.has_pro_access],
-  );
+    try {
+      const payload = await fetchForecast(365);
+      setForecast(payload);
+      setError(null);
+    } catch (nextError) {
+      setError(getApiErrorMessage(nextError));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -496,12 +488,6 @@ export default function PlanScreen() {
         />
       ) : forecast ? (
         <>
-          {forecast.paychecks.length > 0 &&
-          (forecast.bill_occurrences.length > 0 ||
-            forecast.savings_goals.length > 0) ? (
-            <BillingBanner billing={user?.billing} compact />
-          ) : null}
-
           <ForecastSummaryCard
             activeForecastLabel={activeForecastLabel}
             attentionCount={attentionPaychecks.length}

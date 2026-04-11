@@ -130,15 +130,6 @@ function RootNavigator() {
           />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
-            name="billing"
-            options={{
-              title: user?.billing?.has_complimentary_access
-                ? "Plan"
-                : "Billing",
-              ...modalOptions,
-            }}
-          />
-          <Stack.Screen
             name="account"
             options={{
               title: "Account info",
@@ -156,20 +147,6 @@ function RootNavigator() {
             name="help-and-legal"
             options={{
               title: "Help & Support",
-              ...modalOptions,
-            }}
-          />
-          <Stack.Screen
-            name="billing-success"
-            options={{
-              title: "Upgrade complete",
-              ...modalOptions,
-            }}
-          />
-          <Stack.Screen
-            name="billing-cancel"
-            options={{
-              title: "Checkout canceled",
               ...modalOptions,
             }}
           />
