@@ -114,7 +114,9 @@ export function formatFrequency(value: string | null | undefined) {
 
   switch (value) {
     case "biweekly":
-      return "Biweekly";
+      return "Every 2 weeks";
+    case "semimonthly":
+      return "Twice a month";
     case "monthly":
       return "Monthly";
     case "weekly":

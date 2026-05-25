@@ -38,6 +38,7 @@ import { theme } from "@shared/ui/theme";
 const frequencyOptions: PayScheduleInput["frequency"][] = [
   "weekly",
   "biweekly",
+  "semimonthly",
   "monthly",
   "once",
 ];
@@ -51,6 +52,7 @@ export default function NewPayScheduleScreen() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [monthDay, setMonthDay] = useState("");
+  const [secondMonthDay, setSecondMonthDay] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,6 +104,11 @@ export default function NewPayScheduleScreen() {
 
     if (frequency === "monthly") {
       payload.month_day = Number(monthDay || derivedMonthDay || 0) || null;
+    }
+
+    if (frequency === "semimonthly") {
+      payload.month_day = Number(monthDay || derivedMonthDay || 0) || null;
+      payload.interval_value = Number(secondMonthDay || 31) || null;
     }
 
     setLoading(true);
@@ -194,6 +201,31 @@ export default function NewPayScheduleScreen() {
               placeholder={derivedMonthDay ? String(derivedMonthDay) : "15"}
               value={monthDay}
             />
+          ) : null}
+
+          {frequency === "semimonthly" ? (
+            <>
+              <Field
+                hint={
+                  derivedMonthDay
+                    ? `Leave matching the first pay date as day ${derivedMonthDay}, or override it.`
+                    : "Enter the first calendar day this paycheck repeats on."
+                }
+                keyboardType="number-pad"
+                label="First day of month"
+                onChangeText={setMonthDay}
+                placeholder={derivedMonthDay ? String(derivedMonthDay) : "15"}
+                value={monthDay}
+              />
+              <Field
+                hint="Use 31 for the last available day in shorter months."
+                keyboardType="number-pad"
+                label="Second day of month"
+                onChangeText={setSecondMonthDay}
+                placeholder="31"
+                value={secondMonthDay}
+              />
+            </>
           ) : null}
 
           <DatePickerField

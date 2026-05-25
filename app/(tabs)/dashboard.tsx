@@ -25,7 +25,6 @@ import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   firstName,
   formatCurrency,
-  formatDate,
   formatDateWithYear,
 } from "@shared/lib/format";
 import {
@@ -75,10 +74,6 @@ function goalSubtitle(
 
 function sectionCountLabel(count: number, singular: string, plural: string) {
   return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function planningWindowLabel(startDate: string, endDate: string) {
-  return `Current window ${formatDate(startDate)} to ${formatDate(endDate)}`;
 }
 
 function DashboardHeader({
@@ -422,15 +417,6 @@ function NextPaycheckCard({
   if (!nextPaycheck) {
     return (
       <SurfaceCard tone="dark" style={styles.primaryCard}>
-        <View style={styles.cardIntroRow}>
-          <StatusBadge
-            label={planningWindowLabel(
-              dashboard.window.start_date,
-              dashboard.window.end_date,
-            )}
-            tone="accent"
-          />
-        </View>
         <View style={styles.cardCopy}>
           <Text style={styles.cardEyebrow}>Start your plan</Text>
           <Text style={styles.cardHeadline}>Add your first paycheck</Text>
@@ -458,13 +444,6 @@ function NextPaycheckCard({
   return (
     <SurfaceCard tone="dark" style={styles.primaryCard}>
       <View style={styles.cardIntroRow}>
-        <StatusBadge
-          label={planningWindowLabel(
-            dashboard.window.start_date,
-            dashboard.window.end_date,
-          )}
-          tone="accent"
-        />
         <StatusBadge
           label={nextPaycheck.status}
           tone={statusTone(nextPaycheck.status)}
