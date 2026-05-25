@@ -8,9 +8,9 @@ const ENDPOINT_KEYS = [
 ];
 
 const LOCAL_ENDPOINTS = {
-  EXPO_PUBLIC_API_URL_IOS: "http://localhost",
-  EXPO_PUBLIC_API_URL_ANDROID: "http://10.0.2.2",
-  EXPO_PUBLIC_LEGAL_URL: "http://localhost",
+  EXPO_PUBLIC_API_URL_IOS: "http://paydayplanners.test",
+  EXPO_PUBLIC_API_URL_ANDROID: "http://paydayplanners.test",
+  EXPO_PUBLIC_LEGAL_URL: "http://paydayplanners.test",
 };
 
 function parseDotEnv(content) {

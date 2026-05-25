@@ -113,7 +113,7 @@ export type SavingsGoal = {
 export type PayScheduleInput = {
   name: string;
   amount: string;
-  frequency: "weekly" | "biweekly" | "monthly" | "once";
+  frequency: "weekly" | "biweekly" | "semimonthly" | "monthly" | "once";
   start_date: string;
   end_date?: string | null;
   weekday?: number | null;

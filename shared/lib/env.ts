@@ -48,7 +48,7 @@ export const API_BASE_URL =
       process.env.EXPO_PUBLIC_API_URL,
     ),
     "EXPO_PUBLIC_API_URL",
-  ) ?? (__DEV__ ? "http://localhost" : PROD_API_FALLBACK_URL);
+  ) ?? (__DEV__ ? "http://paydayplanners.test" : PROD_API_FALLBACK_URL);
 
 export const LEGAL_BASE_URL =
   enforceProtocol(process.env.EXPO_PUBLIC_LEGAL_URL, "EXPO_PUBLIC_LEGAL_URL") ??
