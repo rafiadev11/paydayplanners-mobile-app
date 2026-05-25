@@ -259,6 +259,18 @@ export default function AccountInfoScreen() {
     : billReminders.permissionStatus === "denied"
       ? "Blocked"
       : "Off";
+  const reminderScheduleLimited =
+    billReminders.totalEligibleReminderCount > billReminders.scheduledCount;
+  const reminderScheduledThrough = billReminders.lastScheduledReminderDate
+    ? ` through ${formatDateWithYear(billReminders.lastScheduledReminderDate)}`
+    : "";
+  const reminderSummary = billReminders.enabled
+    ? billReminders.scheduledCount > 0
+      ? reminderScheduleLimited
+        ? `${billReminders.scheduledCount} reminder date${billReminders.scheduledCount === 1 ? "" : "s"} scheduled${reminderScheduledThrough}. More will schedule automatically as this device refreshes.`
+        : `${billReminders.scheduledCount} reminder${billReminders.scheduledCount === 1 ? "" : "s"} currently scheduled from your upcoming bills.`
+      : "Reminders are on. New alerts will schedule as bills enter the planning window."
+    : "Default timing sends a reminder the morning before a bill is due, or the due morning if the earlier reminder was missed.";
 
   useEffect(() => {
     if (!navigationState?.key) {
@@ -662,13 +674,7 @@ export default function AccountInfoScreen() {
               <Text style={styles.securitySummaryTitle}>
                 Upcoming bill alerts
               </Text>
-              <Text style={styles.securitySummaryBody}>
-                {billReminders.enabled
-                  ? billReminders.scheduledCount > 0
-                    ? `${billReminders.scheduledCount} reminder${billReminders.scheduledCount === 1 ? "" : "s"} currently scheduled from your upcoming bills.`
-                    : "Reminders are on. New alerts will schedule as bills enter the planning window."
-                  : "Default timing sends a reminder the morning before a bill is due, or the due morning if the earlier reminder was missed."}
-              </Text>
+              <Text style={styles.securitySummaryBody}>{reminderSummary}</Text>
             </View>
             <StatusBadge
               label={reminderStatusLabel}

@@ -17,6 +17,7 @@ import {
 } from "@features/planning/api";
 import {
   dateAtTimeInAppTimezone,
+  isoDateInAppTimezone,
   todayInAppTimezone,
 } from "@shared/lib/timezone";
 import {
@@ -36,7 +37,9 @@ Notifications.setNotificationHandler({
 const BILL_REMINDER_CHANNEL_ID = "bill-reminders";
 const BILL_REMINDER_HOUR = 9;
 const BILL_REMINDER_MINUTE = 0;
-const BILL_REMINDER_WINDOW_DAYS = 90;
+const BILL_REMINDER_WINDOW_DAYS = 365;
+const MAX_SCHEDULED_REMINDER_GROUPS = 60;
+const BILL_REMINDER_NOTIFICATION_TYPE = "bill-reminder";
 
 type PermissionState =
   | Notifications.PermissionStatus
@@ -45,16 +48,36 @@ type PermissionState =
 
 type ReminderPrefs = Record<string, { enabled: boolean }>;
 type ReminderScheduleIndex = Record<string, string[]>;
+type ReminderGroup = {
+  date: Date;
+  timing: "today" | "tomorrow";
+  count: number;
+};
+type ReminderSyncResult = {
+  scheduledCount: number;
+  totalEligibleCount: number;
+  lastScheduledDate: string | null;
+};
 
 type BillReminderContextValue = {
   ready: boolean;
   enabled: boolean;
   permissionStatus: PermissionState;
   scheduledCount: number;
+  totalEligibleReminderCount: number;
+  lastScheduledReminderDate: string | null;
   syncing: boolean;
-  enableReminders: () => Promise<{ ok: boolean; message: string }>;
+  enableReminders: () => Promise<{
+    ok: boolean;
+    message: string;
+    sync?: ReminderSyncResult;
+  }>;
   disableReminders: () => Promise<void>;
-  refreshReminders: () => Promise<{ ok: boolean; message: string }>;
+  refreshReminders: () => Promise<{
+    ok: boolean;
+    message: string;
+    sync?: ReminderSyncResult;
+  }>;
   openDeviceSettings: () => Promise<void>;
 };
 
@@ -119,13 +142,11 @@ async function setUserReminderEnabled(id: number | string, enabled: boolean) {
   await saveReminderPrefs(prefs);
 }
 
-async function cancelScheduledRemindersForUser(id: number | string) {
-  const key = userKey(id);
-  const index = await loadReminderScheduleIndex();
-  const identifiers = index[key] ?? [];
+async function cancelScheduledReminderIdentifiers(identifiers: string[]) {
+  const uniqueIdentifiers = [...new Set(identifiers)];
 
   await Promise.all(
-    identifiers.map(async (identifier) => {
+    uniqueIdentifiers.map(async (identifier) => {
       try {
         await Notifications.cancelScheduledNotificationAsync(identifier);
       } catch {
@@ -133,6 +154,38 @@ async function cancelScheduledRemindersForUser(id: number | string) {
       }
     }),
   );
+}
+
+async function getScheduledBillReminderIdentifiers(id?: number | string) {
+  try {
+    const requests = await Notifications.getAllScheduledNotificationsAsync();
+    const key = id === undefined ? null : userKey(id);
+
+    return requests
+      .filter((request) => {
+        const data = request.content.data;
+
+        if (data?.type !== BILL_REMINDER_NOTIFICATION_TYPE) {
+          return false;
+        }
+
+        return key === null || String(data.userId ?? "") === key;
+      })
+      .map((request) => request.identifier);
+  } catch {
+    return [];
+  }
+}
+
+async function cancelScheduledRemindersForUser(id: number | string) {
+  const key = userKey(id);
+  const index = await loadReminderScheduleIndex();
+  const identifiers = [
+    ...(index[key] ?? []),
+    ...(await getScheduledBillReminderIdentifiers(id)),
+  ];
+
+  await cancelScheduledReminderIdentifiers(identifiers);
 
   delete index[key];
   await saveReminderScheduleIndex(index);
@@ -149,18 +202,12 @@ async function storeScheduledRemindersForUser(
 
 async function cancelAllScheduledBillReminders() {
   const index = await loadReminderScheduleIndex();
+  const identifiers = [
+    ...Object.values(index).flat(),
+    ...(await getScheduledBillReminderIdentifiers()),
+  ];
 
-  await Promise.all(
-    Object.values(index)
-      .flat()
-      .map(async (identifier) => {
-        try {
-          await Notifications.cancelScheduledNotificationAsync(identifier);
-        } catch {
-          return;
-        }
-      }),
-  );
+  await cancelScheduledReminderIdentifiers(identifiers);
 
   await saveReminderScheduleIndex({});
 }
@@ -220,14 +267,7 @@ function reminderDateForOccurrence(occurrence: BillOccurrence) {
 }
 
 function buildReminderGroups(occurrences: BillOccurrence[]) {
-  const groups = new Map<
-    string,
-    {
-      date: Date;
-      timing: "today" | "tomorrow";
-      count: number;
-    }
-  >();
+  const groups = new Map<string, ReminderGroup>();
 
   for (const occurrence of occurrences) {
     if (occurrence.status === "paid" || occurrence.status === "skipped") {
@@ -265,10 +305,10 @@ function buildReminderGroups(occurrences: BillOccurrence[]) {
 
 async function scheduleGroupedReminders(
   id: number | string,
-  occurrences: BillOccurrence[],
+  groups: ReminderGroup[],
 ) {
-  const groups = buildReminderGroups(occurrences);
   const identifiers: string[] = [];
+  const key = userKey(id);
 
   try {
     for (const group of groups) {
@@ -285,6 +325,8 @@ async function scheduleGroupedReminders(
           body: `${label} ${timingLabel} Open Payday Planner to ${reviewLabel}`,
           sound: false,
           data: {
+            type: BILL_REMINDER_NOTIFICATION_TYPE,
+            userId: key,
             screen: "/bills",
           },
         },
@@ -299,29 +341,55 @@ async function scheduleGroupedReminders(
       identifiers.push(identifier);
     }
   } catch (error) {
-    await Promise.all(
-      identifiers.map(async (identifier) => {
-        try {
-          await Notifications.cancelScheduledNotificationAsync(identifier);
-        } catch {
-          return;
-        }
-      }),
-    );
+    await cancelScheduledReminderIdentifiers(identifiers);
 
     throw error;
   }
 
-  await storeScheduledRemindersForUser(id, identifiers);
-
-  return identifiers.length;
+  return identifiers;
 }
 
 async function syncRemindersForUser(id: number | string) {
   const occurrences = await fetchBillOccurrences(BILL_REMINDER_WINDOW_DAYS);
+  const groups = buildReminderGroups(occurrences);
+  const scheduledGroups = groups.slice(0, MAX_SCHEDULED_REMINDER_GROUPS);
+
   await cancelScheduledRemindersForUser(id);
 
-  return scheduleGroupedReminders(id, occurrences);
+  const identifiers = await scheduleGroupedReminders(id, scheduledGroups);
+
+  try {
+    await storeScheduledRemindersForUser(id, identifiers);
+  } catch (error) {
+    await cancelScheduledReminderIdentifiers(identifiers);
+    throw error;
+  }
+
+  const lastScheduledGroup = scheduledGroups.at(-1);
+
+  return {
+    scheduledCount: identifiers.length,
+    totalEligibleCount: groups.length,
+    lastScheduledDate: lastScheduledGroup
+      ? isoDateInAppTimezone(lastScheduledGroup.date)
+      : null,
+  };
+}
+
+function reminderSyncMessage(
+  successPrefix: string,
+  emptyMessage: string,
+  result: ReminderSyncResult,
+) {
+  if (result.scheduledCount === 0) {
+    return emptyMessage;
+  }
+
+  if (result.totalEligibleCount > result.scheduledCount) {
+    return `${result.scheduledCount} reminder dates scheduled. More will schedule automatically as this device refreshes.`;
+  }
+
+  return `${successPrefix} ${result.scheduledCount} reminder${result.scheduledCount === 1 ? "" : "s"} scheduled.`;
 }
 
 export function BillReminderProvider({ children }: { children: ReactNode }) {
@@ -332,6 +400,11 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
   const [permissionStatus, setPermissionStatus] =
     useState<PermissionState>("unavailable");
   const [scheduledCount, setScheduledCount] = useState(0);
+  const [totalEligibleReminderCount, setTotalEligibleReminderCount] =
+    useState(0);
+  const [lastScheduledReminderDate, setLastScheduledReminderDate] = useState<
+    string | null
+  >(null);
   const [syncing, setSyncing] = useState(false);
   const [providerReady, setProviderReady] = useState(false);
 
@@ -369,6 +442,8 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
         setEnabled(false);
         setPermissionStatus(await getPermissionStatus());
         setScheduledCount(0);
+        setTotalEligibleReminderCount(0);
+        setLastScheduledReminderDate(null);
         setProviderReady(true);
         return;
       }
@@ -387,12 +462,17 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
         setSyncing(true);
 
         try {
-          const count = await syncRemindersForUser(user.id);
+          const result = await syncRemindersForUser(user.id);
           if (!active) return;
-          setScheduledCount(count);
+          setScheduledCount(result.scheduledCount);
+          setTotalEligibleReminderCount(result.totalEligibleCount);
+          setLastScheduledReminderDate(result.lastScheduledDate);
         } catch {
           if (!active) return;
-          setScheduledCount(await getScheduledReminderCount(user.id));
+          const count = await getScheduledReminderCount(user.id);
+          setScheduledCount(count);
+          setTotalEligibleReminderCount(count);
+          setLastScheduledReminderDate(null);
         } finally {
           if (active) {
             setSyncing(false);
@@ -401,6 +481,8 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
       } else {
         await cancelScheduledRemindersForUser(user.id);
         setScheduledCount(0);
+        setTotalEligibleReminderCount(0);
+        setLastScheduledReminderDate(null);
       }
 
       previousUserIdRef.current = userKey(user.id);
@@ -442,8 +524,10 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
         setSyncing(true);
 
         try {
-          const count = await syncRemindersForUser(user.id);
-          setScheduledCount(count);
+          const result = await syncRemindersForUser(user.id);
+          setScheduledCount(result.scheduledCount);
+          setTotalEligibleReminderCount(result.totalEligibleCount);
+          setLastScheduledReminderDate(result.lastScheduledDate);
         } finally {
           setSyncing(false);
         }
@@ -479,6 +563,8 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
       await setUserReminderEnabled(user.id, false);
       setEnabled(false);
       setScheduledCount(0);
+      setTotalEligibleReminderCount(0);
+      setLastScheduledReminderDate(null);
 
       return {
         ok: false,
@@ -491,21 +577,27 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
 
     try {
       await setUserReminderEnabled(user.id, true);
-      const count = await syncRemindersForUser(user.id);
+      const result = await syncRemindersForUser(user.id);
       setEnabled(true);
-      setScheduledCount(count);
+      setScheduledCount(result.scheduledCount);
+      setTotalEligibleReminderCount(result.totalEligibleCount);
+      setLastScheduledReminderDate(result.lastScheduledDate);
 
       return {
         ok: true,
-        message:
-          count > 0
-            ? `Bill reminders are on. ${count} reminder${count === 1 ? "" : "s"} scheduled.`
-            : "Bill reminders are on. New reminders will appear as upcoming bills enter the planning window.",
+        message: reminderSyncMessage(
+          "Bill reminders are on.",
+          "Bill reminders are on. New reminders will appear as upcoming bills enter the planning window.",
+          result,
+        ),
+        sync: result,
       };
     } catch {
       await setUserReminderEnabled(user.id, false);
       setEnabled(false);
       setScheduledCount(0);
+      setTotalEligibleReminderCount(0);
+      setLastScheduledReminderDate(null);
 
       return {
         ok: false,
@@ -529,6 +621,8 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
       await cancelScheduledRemindersForUser(user.id);
       setEnabled(false);
       setScheduledCount(0);
+      setTotalEligibleReminderCount(0);
+      setLastScheduledReminderDate(null);
     } finally {
       setSyncing(false);
     }
@@ -545,21 +639,25 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
     setSyncing(true);
 
     try {
-      const count = await syncRemindersForUser(user.id);
-      setScheduledCount(count);
+      const result = await syncRemindersForUser(user.id);
+      setScheduledCount(result.scheduledCount);
+      setTotalEligibleReminderCount(result.totalEligibleCount);
+      setLastScheduledReminderDate(result.lastScheduledDate);
 
       return {
         ok: true,
-        message:
-          count > 0
-            ? `Bill reminders refreshed. ${count} reminder${count === 1 ? "" : "s"} scheduled.`
-            : "Bill reminders refreshed. No upcoming reminders are currently needed.",
+        message: reminderSyncMessage(
+          "Bill reminders refreshed.",
+          "Bill reminders refreshed. No upcoming reminders are currently needed.",
+          result,
+        ),
+        sync: result,
       };
     } catch {
       return {
         ok: false,
         message:
-          "Reminders could not be refreshed right now. Your existing schedule was left in place.",
+          "Reminders could not be refreshed right now. Try again in a moment.",
       };
     } finally {
       setSyncing(false);
@@ -577,6 +675,8 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
         enabled,
         permissionStatus,
         scheduledCount,
+        totalEligibleReminderCount,
+        lastScheduledReminderDate,
         syncing,
         enableReminders,
         disableReminders,
