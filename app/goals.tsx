@@ -1,9 +1,11 @@
-import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
 import { RefreshControl, StyleSheet, Text, View } from "react-native";
 
-import { fetchSavingsGoals, type SavingsGoal } from "@features/planning/api";
+import { useAuth } from "@features/auth/auth-context";
+import { type SavingsGoal } from "@features/planning/api";
+import { useSavingsGoalsQuery } from "@features/planning/queries";
+import { usePlanningRevision } from "@shared/api/planning-revision";
+import { useRefetchStaleOnFocus } from "@shared/api/use-refetch-stale-on-focus";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   formatCurrency,
@@ -196,32 +198,18 @@ function GoalCard({ goal, onEdit }: { goal: SavingsGoal; onEdit: () => void }) {
 
 export default function GoalsScreen() {
   const router = useRouter();
-  const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const planningRevision = usePlanningRevision();
+  const goalsQuery = useSavingsGoalsQuery({
+    revision: planningRevision,
+    userId: user?.id,
+  });
+  const goals = goalsQuery.data ?? [];
+  const loading = goalsQuery.isPending && !goals.length;
+  const refreshing = goalsQuery.isRefetching && !goalsQuery.isPending;
+  const error = goalsQuery.error ? getApiErrorMessage(goalsQuery.error) : null;
 
-  const load = useCallback(async (refresh = false) => {
-    if (refresh) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      const nextGoals = await fetchSavingsGoals();
-      setGoals(nextGoals);
-      setError(null);
-    } catch (nextError) {
-      setError(getApiErrorMessage(nextError));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
+  useRefetchStaleOnFocus(goalsQuery);
 
   const activeGoals = goals.filter(
     (goal) => goal.is_active && !goal.is_completed,
@@ -237,7 +225,7 @@ export default function GoalsScreen() {
       refreshControl={
         <RefreshControl
           onRefresh={() => {
-            void load(true);
+            void goalsQuery.refetch();
           }}
           refreshing={refreshing}
           tintColor={theme.colors.primary}
@@ -256,7 +244,7 @@ export default function GoalsScreen() {
         <ErrorState
           body={error}
           onRetry={() => {
-            void load();
+            void goalsQuery.refetch();
           }}
           title="Goals unavailable"
         />

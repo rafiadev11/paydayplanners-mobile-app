@@ -13,6 +13,7 @@ export type User = {
   id: number | string;
   name: string;
   email: string;
+  planning_revision?: number | string | null;
 };
 
 export type BillCategory = {
@@ -150,6 +151,7 @@ export type SavingsGoalInput = {
 };
 
 export type DashboardResponse = {
+  planning_revision?: number | string;
   window: {
     start_date: string;
     end_date: string;
@@ -217,6 +219,7 @@ export type ForecastPaycheck = PaycheckOccurrence & {
 };
 
 export type ForecastResponse = {
+  planning_revision?: number | string;
   window: {
     start_date: string;
     end_date: string;

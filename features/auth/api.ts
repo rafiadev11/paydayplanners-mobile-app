@@ -5,6 +5,7 @@ export type User = {
   id: number | string;
   name: string;
   email: string;
+  planning_revision?: number | string | null;
   timezone?: string | null;
   email_verified_at?: string | null;
   created_at?: string | null;
@@ -61,6 +62,7 @@ function unwrapAuthResponse(payload: AuthResponseEnvelope | AuthResponse) {
 }
 
 export type DashboardResponse = {
+  planning_revision?: number | string;
   window: {
     start_date: string;
     end_date: string;
