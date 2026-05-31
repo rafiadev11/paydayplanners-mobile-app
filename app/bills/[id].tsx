@@ -45,6 +45,7 @@ const frequencyOptions: BillInput["frequency"][] = [
   "weekly",
   "biweekly",
   "monthly",
+  "yearly",
   "once",
 ];
 

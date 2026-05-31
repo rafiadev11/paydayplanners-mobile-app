@@ -126,7 +126,7 @@ export type BillInput = {
   name: string;
   bill_category_id?: number | string | null;
   amount: string;
-  frequency: "weekly" | "biweekly" | "monthly" | "once";
+  frequency: "weekly" | "biweekly" | "monthly" | "yearly" | "once";
   due_day?: number | null;
   weekday?: number | null;
   start_date: string;
