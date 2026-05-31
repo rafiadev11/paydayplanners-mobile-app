@@ -4,11 +4,10 @@
     "name": "Payday Planner",
     "slug": "paydayplanners",
     "scheme": "paydayplanners",
-    "version": "1.1.0",
+    "version": "1.1.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -28,8 +27,7 @@
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.paydayplanners.app",
-      "edgeToEdgeEnabled": true
+      "package": "com.paydayplanners.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -56,7 +54,9 @@
           "project": "payday-planner-mobile",
           "organization": "power-my-fitness"
         }
-      ]
+      ],
+      "expo-font",
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true

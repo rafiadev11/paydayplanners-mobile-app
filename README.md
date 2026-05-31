@@ -47,6 +47,24 @@ npm run android
 
 Update `.env.production.local` before any preview or production build.
 
+### Check simulator endpoints
+
+Run this before testing backend-dependent flows, especially update prompts:
+
+```bash
+npm run env
+```
+
+Local simulator endpoints look like this:
+
+```text
+EXPO_PUBLIC_API_URL_IOS=http://paydayplanners.test
+EXPO_PUBLIC_API_URL_ANDROID=http://paydayplanners.test
+EXPO_PUBLIC_LEGAL_URL=http://paydayplanners.test
+```
+
+Use `npm run dev` for local endpoints and `npm run prod` for production endpoints. Restart Expo after switching so the simulator picks up the new env values.
+
 ## Release commands
 
 ```bash
