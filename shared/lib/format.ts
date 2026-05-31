@@ -119,6 +119,8 @@ export function formatFrequency(value: string | null | undefined) {
       return "Twice a month";
     case "monthly":
       return "Monthly";
+    case "yearly":
+      return "Yearly";
     case "weekly":
       return "Weekly";
     case "once":

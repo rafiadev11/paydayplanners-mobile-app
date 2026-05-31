@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 import { API_BASE_URL } from "@shared/lib/env";
 import { getAppTimezone } from "@shared/lib/timezone";
 import { tokenStorage } from "@shared/storage/secure";
+import { setPlanningRevision } from "./planning-revision";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -54,4 +55,27 @@ api.interceptors.request.use(async (config) => {
   }
 
   return config;
+});
+
+api.interceptors.response.use((response) => {
+  const payload = response.data;
+  const revisionHeader =
+    response.headers["x-planning-revision"] ??
+    response.headers["X-Planning-Revision"];
+
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "planning_revision" in payload
+  ) {
+    setPlanningRevision(
+      (payload as { planning_revision?: number | string }).planning_revision,
+    );
+  }
+
+  if (revisionHeader) {
+    setPlanningRevision(String(revisionHeader));
+  }
+
+  return response;
 });

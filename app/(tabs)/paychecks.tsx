@@ -1,7 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -11,11 +10,16 @@ import {
 } from "react-native";
 
 import {
-  fetchPaySchedules,
-  fetchPaycheckOccurrences,
   type PaySchedule,
   type PaycheckOccurrence,
 } from "@features/planning/api";
+import { useAuth } from "@features/auth/auth-context";
+import {
+  usePaycheckOccurrencesQuery,
+  usePaySchedulesQuery,
+} from "@features/planning/queries";
+import { usePlanningRevision } from "@shared/api/planning-revision";
+import { useRefetchStaleOnFocus } from "@shared/api/use-refetch-stale-on-focus";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   formatCurrency,
@@ -371,41 +375,29 @@ function MonthSection({
 
 export default function PaychecksScreen() {
   const router = useRouter();
-  const [schedules, setSchedules] = useState<PaySchedule[]>([]);
-  const [occurrences, setOccurrences] = useState<PaycheckOccurrence[]>([]);
+  const { user } = useAuth();
+  const planningRevision = usePlanningRevision();
+  const scope = {
+    revision: planningRevision,
+    userId: user?.id,
+  };
+  const schedulesQuery = usePaySchedulesQuery(scope);
+  const occurrencesQuery = usePaycheckOccurrencesQuery(scope);
+  const schedules = schedulesQuery.data ?? [];
+  const occurrences = occurrencesQuery.data ?? [];
   const [expandedMonths, setExpandedMonths] = useState<
     Record<string, boolean | undefined>
   >({});
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const loading =
+    (schedulesQuery.isPending || occurrencesQuery.isPending) &&
+    !schedules.length &&
+    !occurrences.length;
+  const refreshing =
+    (schedulesQuery.isRefetching || occurrencesQuery.isRefetching) && !loading;
+  const queryError = schedulesQuery.error ?? occurrencesQuery.error;
+  const error = queryError ? getApiErrorMessage(queryError) : null;
 
-  const load = useCallback(async (refresh = false) => {
-    if (refresh) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      const [nextSchedules, nextOccurrences] = await Promise.all([
-        fetchPaySchedules(),
-        fetchPaycheckOccurrences(365),
-      ]);
-
-      setSchedules(nextSchedules);
-      setOccurrences(nextOccurrences);
-      setError(null);
-    } catch (nextError) {
-      setError(getApiErrorMessage(nextError));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
+  useRefetchStaleOnFocus(schedulesQuery, occurrencesQuery);
 
   useEffect(() => {
     setExpandedMonths({});
@@ -421,7 +413,10 @@ export default function PaychecksScreen() {
       refreshControl={
         <RefreshControl
           onRefresh={() => {
-            void load(true);
+            void Promise.all([
+              schedulesQuery.refetch(),
+              occurrencesQuery.refetch(),
+            ]);
           }}
           refreshing={refreshing}
           tintColor={theme.colors.primary}
@@ -440,7 +435,10 @@ export default function PaychecksScreen() {
         <ErrorState
           body={error}
           onRetry={() => {
-            void load();
+            void Promise.all([
+              schedulesQuery.refetch(),
+              occurrencesQuery.refetch(),
+            ]);
           }}
           title="Paycheck data unavailable"
         />

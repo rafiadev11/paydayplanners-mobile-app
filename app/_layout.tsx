@@ -11,6 +11,7 @@ import {
   BiometricLockProvider,
   useBiometricLock,
 } from "@features/security/biometric-lock-context";
+import { ApiQueryProvider } from "@shared/api/query-client";
 import { SENTRY_DSN, SENTRY_ENABLE_DEV } from "@shared/lib/env";
 import { theme, withAlpha } from "@shared/ui/theme";
 import * as Sentry from "@sentry/react-native";
@@ -338,13 +339,15 @@ function BiometricLockScreen() {
 
 function RootLayout() {
   return (
-    <AuthProvider>
-      <BillReminderProvider>
-        <BiometricLockProvider>
-          <RootNavigator />
-        </BiometricLockProvider>
-      </BillReminderProvider>
-    </AuthProvider>
+    <ApiQueryProvider>
+      <AuthProvider>
+        <BillReminderProvider>
+          <BiometricLockProvider>
+            <RootNavigator />
+          </BiometricLockProvider>
+        </BillReminderProvider>
+      </AuthProvider>
+    </ApiQueryProvider>
   );
 }
 

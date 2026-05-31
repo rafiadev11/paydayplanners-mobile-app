@@ -1,6 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
-import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -17,10 +16,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
 import {
-  fetchDashboard,
   type BillOccurrence,
   type DashboardResponse,
 } from "@features/planning/api";
+import { useDashboardQuery } from "@features/planning/queries";
+import { usePlanningRevision } from "@shared/api/planning-revision";
+import { useRefetchStaleOnFocus } from "@shared/api/use-refetch-stale-on-focus";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   firstName,
@@ -528,38 +529,20 @@ function NextPaycheckCard({
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const planningRevision = usePlanningRevision();
+  const dashboardQuery = useDashboardQuery({
+    revision: planningRevision,
+    userId: user?.id,
+  });
+  const dashboard = dashboardQuery.data ?? null;
+  const loading = dashboardQuery.isPending && !dashboard;
+  const refreshing = dashboardQuery.isRefetching && !dashboardQuery.isPending;
+  const error = dashboardQuery.error
+    ? getApiErrorMessage(dashboardQuery.error)
+    : null;
 
-  const loadDashboard = useCallback(
-    async (refresh = false) => {
-      if (!user?.id) return;
-
-      if (refresh) setRefreshing(true);
-      else setLoading(true);
-
-      try {
-        const payload = await fetchDashboard();
-        setDashboard(payload);
-        setError(null);
-      } catch (nextError) {
-        setError(getApiErrorMessage(nextError));
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [user?.id],
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      void loadDashboard();
-    }, [loadDashboard]),
-  );
+  useRefetchStaleOnFocus(dashboardQuery);
 
   const openAccount = useCallback(() => {
     setDrawerOpen(false);
@@ -591,7 +574,7 @@ export default function DashboardScreen() {
         refreshControl={
           <RefreshControl
             onRefresh={() => {
-              void loadDashboard(true);
+              void dashboardQuery.refetch();
             }}
             refreshing={refreshing}
             tintColor={theme.colors.primary}
@@ -611,7 +594,7 @@ export default function DashboardScreen() {
           <ErrorState
             body={error}
             onRetry={() => {
-              void loadDashboard();
+              void dashboardQuery.refetch();
             }}
             title="Dashboard unavailable"
           />

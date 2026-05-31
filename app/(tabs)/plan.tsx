@@ -1,7 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -12,10 +11,13 @@ import {
 } from "react-native";
 
 import {
-  fetchForecast,
   type ForecastPaycheck,
   type ForecastResponse,
 } from "@features/planning/api";
+import { useAuth } from "@features/auth/auth-context";
+import { useForecastQuery } from "@features/planning/queries";
+import { usePlanningRevision } from "@shared/api/planning-revision";
+import { useRefetchStaleOnFocus } from "@shared/api/use-refetch-stale-on-focus";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   formatCurrency,
@@ -404,37 +406,26 @@ function MonthSection({
 
 export default function PlanScreen() {
   const router = useRouter();
-  const [forecast, setForecast] = useState<ForecastResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const planningRevision = usePlanningRevision();
+  const forecastQuery = useForecastQuery({
+    revision: planningRevision,
+    userId: user?.id,
+  });
+  const forecast = forecastQuery.data ?? null;
+  const loading = forecastQuery.isPending && !forecast;
+  const refreshing = forecastQuery.isRefetching && !forecastQuery.isPending;
+  const error = forecastQuery.error
+    ? getApiErrorMessage(forecastQuery.error)
+    : null;
+
+  useRefetchStaleOnFocus(forecastQuery);
+
   const [selectedFilter, setSelectedFilter] = useState<PlanFilter>("next3");
   const [expandedMonths, setExpandedMonths] = useState<
     Record<string, boolean | undefined>
   >({});
   const activeForecastLabel = forecastLabel();
-
-  const loadForecast = useCallback(async (refresh = false) => {
-    if (refresh) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      const payload = await fetchForecast(365);
-      setForecast(payload);
-      setError(null);
-    } catch (nextError) {
-      setError(getApiErrorMessage(nextError));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      void loadForecast();
-    }, [loadForecast]),
-  );
 
   useEffect(() => {
     setExpandedMonths({});
@@ -463,7 +454,7 @@ export default function PlanScreen() {
       refreshControl={
         <RefreshControl
           onRefresh={() => {
-            void loadForecast(true);
+            void forecastQuery.refetch();
           }}
           refreshing={refreshing}
           tintColor={theme.colors.primary}
@@ -482,7 +473,7 @@ export default function PlanScreen() {
         <ErrorState
           body={error}
           onRetry={() => {
-            void loadForecast();
+            void forecastQuery.refetch();
           }}
           title="Forecast unavailable"
         />

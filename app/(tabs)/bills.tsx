@@ -1,6 +1,5 @@
-import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -10,12 +9,14 @@ import {
   View,
 } from "react-native";
 
+import { type Bill, type BillOccurrence } from "@features/planning/api";
+import { useAuth } from "@features/auth/auth-context";
 import {
-  fetchBillOccurrences,
-  fetchBills,
-  type Bill,
-  type BillOccurrence,
-} from "@features/planning/api";
+  useBillOccurrencesQuery,
+  useBillsQuery,
+} from "@features/planning/queries";
+import { usePlanningRevision } from "@shared/api/planning-revision";
+import { useRefetchStaleOnFocus } from "@shared/api/use-refetch-stale-on-focus";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   formatCurrency,
@@ -260,39 +261,27 @@ function BillCard({
 
 export default function BillsScreen() {
   const router = useRouter();
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [occurrences, setOccurrences] = useState<BillOccurrence[]>([]);
+  const { user } = useAuth();
+  const planningRevision = usePlanningRevision();
+  const scope = {
+    revision: planningRevision,
+    userId: user?.id,
+  };
+  const billsQuery = useBillsQuery(scope);
+  const occurrencesQuery = useBillOccurrencesQuery(scope);
+  const bills = billsQuery.data ?? [];
+  const occurrences = occurrencesQuery.data ?? [];
   const [selectedFilter, setSelectedFilter] = useState<BillFilter>("all");
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const loading =
+    (billsQuery.isPending || occurrencesQuery.isPending) &&
+    !bills.length &&
+    !occurrences.length;
+  const refreshing =
+    (billsQuery.isRefetching || occurrencesQuery.isRefetching) && !loading;
+  const queryError = billsQuery.error ?? occurrencesQuery.error;
+  const error = queryError ? getApiErrorMessage(queryError) : null;
 
-  const load = useCallback(async (refresh = false) => {
-    if (refresh) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      const [nextBills, nextOccurrences] = await Promise.all([
-        fetchBills(),
-        fetchBillOccurrences(365),
-      ]);
-
-      setBills(nextBills);
-      setOccurrences(nextOccurrences);
-      setError(null);
-    } catch (nextError) {
-      setError(getApiErrorMessage(nextError));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load]),
-  );
+  useRefetchStaleOnFocus(billsQuery, occurrencesQuery);
 
   useEffect(() => {
     setSelectedFilter("all");
@@ -337,7 +326,10 @@ export default function BillsScreen() {
       refreshControl={
         <RefreshControl
           onRefresh={() => {
-            void load(true);
+            void Promise.all([
+              billsQuery.refetch(),
+              occurrencesQuery.refetch(),
+            ]);
           }}
           refreshing={refreshing}
           tintColor={theme.colors.primary}
@@ -356,7 +348,10 @@ export default function BillsScreen() {
         <ErrorState
           body={error}
           onRetry={() => {
-            void load();
+            void Promise.all([
+              billsQuery.refetch(),
+              occurrencesQuery.refetch(),
+            ]);
           }}
           title="Bills unavailable"
         />

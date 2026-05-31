@@ -13,6 +13,7 @@ export type User = {
   id: number | string;
   name: string;
   email: string;
+  planning_revision?: number | string | null;
 };
 
 export type BillCategory = {
@@ -126,7 +127,7 @@ export type BillInput = {
   name: string;
   bill_category_id?: number | string | null;
   amount: string;
-  frequency: "weekly" | "biweekly" | "monthly" | "once";
+  frequency: "weekly" | "biweekly" | "monthly" | "yearly" | "once";
   due_day?: number | null;
   weekday?: number | null;
   start_date: string;
@@ -150,6 +151,7 @@ export type SavingsGoalInput = {
 };
 
 export type DashboardResponse = {
+  planning_revision?: number | string;
   window: {
     start_date: string;
     end_date: string;
@@ -217,6 +219,7 @@ export type ForecastPaycheck = PaycheckOccurrence & {
 };
 
 export type ForecastResponse = {
+  planning_revision?: number | string;
   window: {
     start_date: string;
     end_date: string;

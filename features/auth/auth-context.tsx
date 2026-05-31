@@ -5,7 +5,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
+import { prefetchPlanningQueries } from "@features/planning/queries";
 import {
   login,
   logout,
@@ -15,6 +17,7 @@ import {
   type User,
 } from "@features/auth/api";
 import { setAuthToken } from "@shared/api/client";
+import { setPlanningRevision } from "@shared/api/planning-revision";
 import { setAppTimezone } from "@shared/lib/timezone";
 import { tokenStorage, userStorage } from "@shared/storage/secure";
 
@@ -54,13 +57,24 @@ function normalizeCachedUser(payload: unknown): User | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
   const syncUser = async (nextUser: User | null) => {
     setUser(nextUser);
     setAppTimezone(nextUser?.timezone ?? null);
+    setPlanningRevision(nextUser?.planning_revision);
     await persistUser(nextUser);
+
+    if (nextUser?.id) {
+      void prefetchPlanningQueries(queryClient, {
+        revision: Number(nextUser.planning_revision ?? 0),
+        userId: nextUser.id,
+      });
+    } else {
+      queryClient.clear();
+    }
   };
 
   useEffect(() => {
@@ -73,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const normalizedUser = normalizeCachedUser(JSON.parse(cachedUser));
           setUser(normalizedUser);
           setAppTimezone(normalizedUser?.timezone);
+          setPlanningRevision(normalizedUser?.planning_revision);
         }
 
         const existingToken = await tokenStorage.get();
@@ -87,13 +102,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!active) return;
         setUser(nextUser);
         setAppTimezone(nextUser?.timezone);
+        setPlanningRevision(nextUser?.planning_revision);
         await persistUser(nextUser);
+        void prefetchPlanningQueries(queryClient, {
+          revision: Number(nextUser.planning_revision ?? 0),
+          userId: nextUser.id,
+        });
       } catch {
         if (!active) return;
         setUser(null);
         setAppTimezone(null);
+        setPlanningRevision(0);
         await setAuthToken(null);
         await persistUser(null);
+        queryClient.clear();
       } finally {
         if (active) setReady(true);
       }
@@ -104,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [queryClient]);
 
   const signIn = async (email: string, password: string) => {
     const nextUser = await login(email, password);
