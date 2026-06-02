@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +12,7 @@ import {
 } from "react-native";
 
 import {
+  deletePaySchedule,
   fetchPaySchedule,
   updatePaySchedule,
   type PayScheduleInput,
@@ -60,12 +62,14 @@ export default function EditPayScheduleScreen() {
   const [secondMonthDay, setSecondMonthDay] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const normalizedStartDate = isoDateFromInput(startDate);
   const normalizedEndDate = isoDateFromInput(endDate);
   const derivedWeekday = weekdayFromIsoDate(startDate);
   const derivedMonthDay = monthDayFromIsoDate(startDate);
+  const busy = loading || deleting;
 
   useEffect(() => {
     let active = true;
@@ -168,6 +172,41 @@ export default function EditPayScheduleScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const performDeletion = async () => {
+    if (!id) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      await deletePaySchedule(id);
+      router.replace("/paychecks");
+    } catch (nextError) {
+      setError(getApiErrorMessage(nextError));
+      setDeleting(false);
+    }
+  };
+
+  const promptDeletion = () => {
+    Alert.alert(
+      "Delete this income source?",
+      "This paycheck income source and its generated future paycheck dates will be permanently removed from your plan. This cannot be undone.",
+      [
+        {
+          style: "cancel",
+          text: "Keep income source",
+        },
+        {
+          style: "destructive",
+          text: "Delete income source",
+          onPress: () => {
+            void performDeletion();
+          },
+        },
+      ],
+    );
   };
 
   if (initialLoading) {
@@ -333,19 +372,32 @@ export default function EditPayScheduleScreen() {
 
           <View style={styles.actions}>
             <SecondaryButton
-              disabled={loading}
+              disabled={busy}
               label="Cancel"
               onPress={() => {
                 router.back();
               }}
             />
             <PrimaryButton
-              disabled={loading}
+              disabled={busy}
               icon="content-save-outline"
               label={loading ? "Saving..." : "Save changes"}
               onPress={() => {
                 void submit();
               }}
+            />
+          </View>
+
+          <View style={styles.deleteSection}>
+            <Text style={styles.deleteCopy}>
+              Delete this income source if it should no longer generate
+              paycheck dates in your plan.
+            </Text>
+            <SecondaryButton
+              disabled={busy}
+              icon="trash-can-outline"
+              label={deleting ? "Deleting..." : "Delete income source"}
+              onPress={promptDeletion}
             />
           </View>
         </SurfaceCard>
@@ -398,5 +450,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: theme.spacing.sm,
+  },
+  deleteSection: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.divider,
+    paddingTop: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  deleteCopy: {
+    color: theme.colors.danger,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "600",
   },
 });

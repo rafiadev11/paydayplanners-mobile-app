@@ -355,6 +355,10 @@ export async function updatePaySchedule(
   return item(data);
 }
 
+export async function deletePaySchedule(id: number | string) {
+  await api.delete(`/api/v1/pay-schedules/${id}`);
+}
+
 export async function createBill(input: BillInput) {
   const { data } = await api.post<ItemEnvelope<Bill>>("/api/v1/bills", input);
   return item(data);
@@ -367,6 +371,10 @@ export async function updateBill(id: number | string, input: BillInput) {
   );
 
   return item(data);
+}
+
+export async function deleteBill(id: number | string) {
+  await api.delete(`/api/v1/bills/${id}`);
 }
 
 export async function createSavingsGoal(input: SavingsGoalInput) {
