@@ -390,8 +390,8 @@ export default function EditPayScheduleScreen() {
 
           <View style={styles.deleteSection}>
             <Text style={styles.deleteCopy}>
-              Delete this income source if it should no longer generate
-              paycheck dates in your plan.
+              Delete this income source if it should no longer generate paycheck
+              dates in your plan.
             </Text>
             <SecondaryButton
               disabled={busy}
