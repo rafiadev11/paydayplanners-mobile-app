@@ -2,6 +2,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
+  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -12,6 +13,7 @@ import {
 } from "react-native";
 
 import {
+  deleteBill,
   fetchBill,
   fetchBillCategories,
   updateBill,
@@ -68,12 +70,14 @@ export default function EditBillScreen() {
   const [isActive, setIsActive] = useState(true);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const normalizedStartDate = isoDateFromInput(startDate);
   const normalizedEndDate = isoDateFromInput(endDate);
   const derivedMonthDay = monthDayFromIsoDate(startDate);
   const derivedWeekday = weekdayFromIsoDate(startDate);
+  const busy = loading || deleting;
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -167,6 +171,48 @@ export default function EditBillScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const performDeletion = async () => {
+    if (!id) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      await deleteBill(id);
+
+      try {
+        await billReminders.refreshReminders();
+      } catch {
+        // Deleting the bill succeeded; reminder refresh can recover later.
+      }
+
+      router.replace("/bills");
+    } catch (nextError) {
+      setError(getApiErrorMessage(nextError));
+      setDeleting(false);
+    }
+  };
+
+  const promptDeletion = () => {
+    Alert.alert(
+      "Delete this bill?",
+      "This bill and its future due dates will be permanently removed from your plan. This cannot be undone.",
+      [
+        {
+          style: "cancel",
+          text: "Keep bill",
+        },
+        {
+          style: "destructive",
+          text: "Delete bill",
+          onPress: () => {
+            void performDeletion();
+          },
+        },
+      ],
+    );
   };
 
   if (initialLoading) {
@@ -351,19 +397,31 @@ export default function EditBillScreen() {
 
           <View style={styles.actions}>
             <SecondaryButton
-              disabled={loading}
+              disabled={busy}
               label="Cancel"
               onPress={() => {
                 router.back();
               }}
             />
             <PrimaryButton
-              disabled={loading}
+              disabled={busy}
               icon="content-save-outline"
               label={loading ? "Saving..." : "Save changes"}
               onPress={() => {
                 void submit();
               }}
+            />
+          </View>
+
+          <View style={styles.deleteSection}>
+            <Text style={styles.deleteCopy}>
+              Delete this bill if it should no longer appear in your plan.
+            </Text>
+            <SecondaryButton
+              disabled={busy}
+              icon="trash-can-outline"
+              label={deleting ? "Deleting..." : "Delete bill"}
+              onPress={promptDeletion}
             />
           </View>
         </SurfaceCard>
@@ -424,5 +482,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: theme.spacing.sm,
+  },
+  deleteSection: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.divider,
+    paddingTop: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  deleteCopy: {
+    color: theme.colors.danger,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "600",
   },
 });
