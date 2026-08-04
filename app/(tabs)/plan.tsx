@@ -45,6 +45,10 @@ const monthFormatter = new Intl.DateTimeFormat("en-US", {
 });
 
 const RISK_THRESHOLD = 300;
+const INITIAL_ASSIGNED_BILL_COUNT = 4;
+const ASSIGNED_BILL_BATCH_SIZE = 20;
+const INITIAL_UNFUNDED_BILL_COUNT = 8;
+const UNFUNDED_BILL_BATCH_SIZE = 20;
 
 type PlanFilter = "next3" | "attention" | "all" | "uncovered";
 
@@ -288,6 +292,10 @@ function MonthSection({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const [visibleAllocationLimits, setVisibleAllocationLimits] = useState<
+    Record<string, number>
+  >({});
+
   return (
     <View style={styles.monthSection}>
       <Pressable
@@ -318,57 +326,70 @@ function MonthSection({
 
       {expanded ? (
         <View style={styles.monthCardStack}>
-          {group.paychecks.map((paycheck) => (
-            <SurfaceCard
-              key={String(paycheck.id)}
-              style={styles.paycheckCard}
-              tone={paycheckTone(paycheck)}
-            >
-              <View style={styles.paycheckHeader}>
-                <View style={styles.paycheckHeaderCopy}>
-                  <Text style={styles.paycheckName}>
-                    {paycheck.pay_schedule?.name ?? "Paycheck"}
-                  </Text>
-                  <Text style={styles.paycheckDate}>
-                    {formatDateWithYear(paycheck.occurrence_date)}
-                  </Text>
-                </View>
-                <StatusBadge
-                  label={paycheck.status}
-                  tone={statusTone(paycheck.status)}
-                />
-              </View>
+          {group.paychecks.map((paycheck) => {
+            const paycheckKey = String(paycheck.id);
+            const allocationCount = paycheck.assigned_bill_occurrences.length;
+            const visibleAllocationLimit =
+              visibleAllocationLimits[paycheckKey] ??
+              INITIAL_ASSIGNED_BILL_COUNT;
+            const visibleAllocations = paycheck.assigned_bill_occurrences.slice(
+              0,
+              visibleAllocationLimit,
+            );
+            const hiddenAllocationCount = Math.max(
+              0,
+              allocationCount - visibleAllocationLimit,
+            );
 
-              <Text style={styles.paycheckAmount}>
-                {formatCurrency(paycheck.effective_amount ?? paycheck.amount)}
-              </Text>
+            return (
+              <SurfaceCard
+                key={paycheckKey}
+                style={styles.paycheckCard}
+                tone={paycheckTone(paycheck)}
+              >
+                <View style={styles.paycheckHeader}>
+                  <View style={styles.paycheckHeaderCopy}>
+                    <Text style={styles.paycheckName}>
+                      {paycheck.pay_schedule?.name ?? "Paycheck"}
+                    </Text>
+                    <Text style={styles.paycheckDate}>
+                      {formatDateWithYear(paycheck.occurrence_date)}
+                    </Text>
+                  </View>
+                  <StatusBadge
+                    label={paycheck.status}
+                    tone={statusTone(paycheck.status)}
+                  />
+                </View>
 
-              <View style={styles.paycheckMetrics}>
-                <View style={styles.paycheckMetric}>
-                  <Text style={styles.paycheckMetricLabel}>Bill load</Text>
-                  <Text style={styles.paycheckMetricValue}>
-                    {formatCurrency(paycheck.assigned_total)}
-                  </Text>
-                </View>
-                <View style={styles.paycheckMetric}>
-                  <Text style={styles.paycheckMetricLabel}>Savings</Text>
-                  <Text style={styles.paycheckMetricValue}>
-                    {formatCurrency(paycheck.savings_goal_total)}
-                  </Text>
-                </View>
-                <View style={styles.paycheckMetric}>
-                  <Text style={styles.paycheckMetricLabel}>Left over</Text>
-                  <Text style={styles.paycheckMetricValue}>
-                    {formatCurrency(paycheck.remaining_amount)}
-                  </Text>
-                </View>
-              </View>
+                <Text style={styles.paycheckAmount}>
+                  {formatCurrency(paycheck.effective_amount ?? paycheck.amount)}
+                </Text>
 
-              {paycheck.assigned_bill_occurrences.length ? (
-                <View style={styles.assignmentList}>
-                  {paycheck.assigned_bill_occurrences
-                    .slice(0, 4)
-                    .map((assignment) => (
+                <View style={styles.paycheckMetrics}>
+                  <View style={styles.paycheckMetric}>
+                    <Text style={styles.paycheckMetricLabel}>Bill load</Text>
+                    <Text style={styles.paycheckMetricValue}>
+                      {formatCurrency(paycheck.assigned_total)}
+                    </Text>
+                  </View>
+                  <View style={styles.paycheckMetric}>
+                    <Text style={styles.paycheckMetricLabel}>Savings</Text>
+                    <Text style={styles.paycheckMetricValue}>
+                      {formatCurrency(paycheck.savings_goal_total)}
+                    </Text>
+                  </View>
+                  <View style={styles.paycheckMetric}>
+                    <Text style={styles.paycheckMetricLabel}>Left over</Text>
+                    <Text style={styles.paycheckMetricValue}>
+                      {formatCurrency(paycheck.remaining_amount)}
+                    </Text>
+                  </View>
+                </View>
+
+                {paycheck.assigned_bill_occurrences.length ? (
+                  <View style={styles.assignmentList}>
+                    {visibleAllocations.map((assignment) => (
                       <Row
                         key={String(assignment.allocation_id)}
                         badge={
@@ -388,16 +409,48 @@ function MonthSection({
                         value={formatCurrency(assignment.allocation_amount)}
                       />
                     ))}
-                  {paycheck.assigned_bill_occurrences.length > 4 ? (
-                    <Text style={styles.moreLabel}>
-                      +{paycheck.assigned_bill_occurrences.length - 4} more
-                      allocations on this paycheck
-                    </Text>
-                  ) : null}
-                </View>
-              ) : null}
-            </SurfaceCard>
-          ))}
+                    {allocationCount > INITIAL_ASSIGNED_BILL_COUNT ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => {
+                          setVisibleAllocationLimits((current) => ({
+                            ...current,
+                            [paycheckKey]:
+                              hiddenAllocationCount > 0
+                                ? Math.min(
+                                    visibleAllocationLimit +
+                                      ASSIGNED_BILL_BATCH_SIZE,
+                                    allocationCount,
+                                  )
+                                : INITIAL_ASSIGNED_BILL_COUNT,
+                          }));
+                        }}
+                        style={({ pressed }) => [
+                          styles.listToggle,
+                          pressed ? styles.listTogglePressed : null,
+                        ]}
+                      >
+                        <Text style={styles.listToggleText}>
+                          {hiddenAllocationCount === 0
+                            ? "Show fewer bills"
+                            : `Show next ${Math.min(ASSIGNED_BILL_BATCH_SIZE, hiddenAllocationCount)} bills (${hiddenAllocationCount} remaining)`}
+                        </Text>
+                        <MaterialCommunityIcons
+                          color={theme.colors.primary}
+                          name={
+                            hiddenAllocationCount === 0
+                              ? "chevron-up"
+                              : "chevron-down"
+                          }
+                          size={20}
+                        />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ) : null}
+              </SurfaceCard>
+            );
+          })}
         </View>
       ) : null}
     </View>
@@ -425,10 +478,14 @@ export default function PlanScreen() {
   const [expandedMonths, setExpandedMonths] = useState<
     Record<string, boolean | undefined>
   >({});
+  const [unfundedVisibleLimit, setUnfundedVisibleLimit] = useState(
+    INITIAL_UNFUNDED_BILL_COUNT,
+  );
   const activeForecastLabel = forecastLabel();
 
   useEffect(() => {
     setExpandedMonths({});
+    setUnfundedVisibleLimit(INITIAL_UNFUNDED_BILL_COUNT);
   }, [forecast?.window.end_date, forecast?.window.start_date, selectedFilter]);
 
   const paychecks = forecast?.paychecks ?? [];
@@ -587,20 +644,65 @@ export default function PlanScreen() {
                 title="Unfunded items"
               />
               {forecast.unassigned_bill_occurrences.length ? (
-                forecast.unassigned_bill_occurrences
-                  .slice(0, 8)
-                  .map((bill) => (
-                    <Row
-                      key={String(bill.id)}
-                      badge={<StatusBadge label={bill.status} tone="danger" />}
-                      subtitle={`Due ${formatDateWithYear(bill.due_date)}`}
-                      title={bill.bill?.name ?? "Bill occurrence"}
-                      value={formatCurrency(
-                        bill.unfunded_amount ?? bill.amount,
-                      )}
-                      valueTone="danger"
-                    />
-                  ))
+                <>
+                  {forecast.unassigned_bill_occurrences
+                    .slice(0, unfundedVisibleLimit)
+                    .map((bill) => (
+                      <Row
+                        key={String(bill.id)}
+                        badge={
+                          <StatusBadge label={bill.status} tone="danger" />
+                        }
+                        subtitle={`Due ${formatDateWithYear(bill.due_date)}`}
+                        title={bill.bill?.name ?? "Bill occurrence"}
+                        value={formatCurrency(
+                          bill.unfunded_amount ?? bill.amount,
+                        )}
+                        valueTone="danger"
+                      />
+                    ))}
+                  {forecast.unassigned_bill_occurrences.length >
+                  INITIAL_UNFUNDED_BILL_COUNT ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => {
+                        setUnfundedVisibleLimit((current) =>
+                          current < forecast.unassigned_bill_occurrences.length
+                            ? Math.min(
+                                current + UNFUNDED_BILL_BATCH_SIZE,
+                                forecast.unassigned_bill_occurrences.length,
+                              )
+                            : INITIAL_UNFUNDED_BILL_COUNT,
+                        );
+                      }}
+                      style={({ pressed }) => [
+                        styles.listToggle,
+                        pressed ? styles.listTogglePressed : null,
+                      ]}
+                    >
+                      <Text style={styles.listToggleText}>
+                        {unfundedVisibleLimit >=
+                        forecast.unassigned_bill_occurrences.length
+                          ? "Show fewer bills"
+                          : `Show next ${Math.min(
+                              UNFUNDED_BILL_BATCH_SIZE,
+                              forecast.unassigned_bill_occurrences.length -
+                                unfundedVisibleLimit,
+                            )} bills (${forecast.unassigned_bill_occurrences.length - unfundedVisibleLimit} remaining)`}
+                      </Text>
+                      <MaterialCommunityIcons
+                        color={theme.colors.primary}
+                        name={
+                          unfundedVisibleLimit >=
+                          forecast.unassigned_bill_occurrences.length
+                            ? "chevron-up"
+                            : "chevron-down"
+                        }
+                        size={20}
+                      />
+                    </Pressable>
+                  ) : null}
+                </>
               ) : (
                 <EmptyState
                   body="Every visible bill in this forecast already has a paycheck behind it."
@@ -796,8 +898,23 @@ const styles = StyleSheet.create({
   assignmentList: {
     gap: theme.spacing.md,
   },
-  moreLabel: {
-    color: theme.colors.muted,
-    ...theme.typography.body,
+  listToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing.sm,
+    borderRadius: theme.radius.md,
+    backgroundColor: withAlpha(theme.colors.primary, 0.08),
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  listTogglePressed: {
+    opacity: 0.82,
+  },
+  listToggleText: {
+    flex: 1,
+    color: theme.colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
   },
 });
