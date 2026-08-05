@@ -57,6 +57,7 @@ type ButtonProps = {
   onPress: () => void;
   disabled?: boolean;
   icon?: keyof typeof MaterialCommunityIcons.glyphMap;
+  size?: "sm" | "md";
 };
 
 type FieldProps = TextInputProps & {
@@ -257,13 +258,17 @@ export function SecondaryButton({
   onPress,
   disabled,
   icon,
+  size = "md",
 }: ButtonProps) {
+  const small = size === "sm";
+
   return (
     <Pressable
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.secondaryButton,
+        small ? styles.secondaryButtonSmall : null,
         pressed && !disabled ? styles.buttonPressed : null,
         disabled ? styles.buttonDisabled : null,
       ]}
@@ -272,10 +277,17 @@ export function SecondaryButton({
         <MaterialCommunityIcons
           color={theme.colors.ink}
           name={icon}
-          size={18}
+          size={small ? 15 : 18}
         />
       ) : null}
-      <Text style={styles.secondaryButtonLabel}>{label}</Text>
+      <Text
+        style={[
+          styles.secondaryButtonLabel,
+          small ? styles.secondaryButtonLabelSmall : null,
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -617,10 +629,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  secondaryButtonSmall: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    gap: 6,
+  },
   secondaryButtonLabel: {
     color: theme.colors.ink,
     fontSize: 14,
     fontWeight: "700",
+  },
+  secondaryButtonLabelSmall: {
+    fontSize: 13,
   },
   buttonPressed: {
     opacity: 0.82,

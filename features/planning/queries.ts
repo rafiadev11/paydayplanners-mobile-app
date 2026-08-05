@@ -51,8 +51,12 @@ export const planningKeys = {
     [...scopeKey(scope), "savings-goals"] as const,
 };
 
-function enabled(scope: PlanningScope) {
-  return Boolean(scope.userId);
+type QueryGate = {
+  enabled?: boolean;
+};
+
+function enabled(scope: PlanningScope, gate?: QueryGate) {
+  return Boolean(scope.userId) && gate?.enabled !== false;
 }
 
 export function useDashboardQuery(scope: PlanningScope) {
@@ -76,9 +80,9 @@ export function useForecastQuery(
   });
 }
 
-export function useBillsQuery(scope: PlanningScope) {
+export function useBillsQuery(scope: PlanningScope, gate?: QueryGate) {
   return useQuery({
-    enabled: enabled(scope),
+    enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
     queryFn: fetchBills,
     queryKey: planningKeys.bills(scope),
@@ -97,9 +101,9 @@ export function useBillOccurrencesQuery(
   });
 }
 
-export function usePaySchedulesQuery(scope: PlanningScope) {
+export function usePaySchedulesQuery(scope: PlanningScope, gate?: QueryGate) {
   return useQuery({
-    enabled: enabled(scope),
+    enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
     queryFn: fetchPaySchedules,
     queryKey: planningKeys.paySchedules(scope),

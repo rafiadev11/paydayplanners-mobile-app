@@ -15,22 +15,26 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
+import { DueBillsCard } from "@features/home/due-bills-card";
 import {
-  type BillOccurrence,
-  type DashboardResponse,
-} from "@features/planning/api";
-import { useDashboardQuery } from "@features/planning/queries";
+  homeHeaderTitle,
+  NextUpCard,
+  NextUpHeader,
+  resolveHomeHeroState,
+} from "@features/home/next-up-card";
+import { useHomeIntro } from "@features/home/use-home-intro";
+import { type BillOccurrence } from "@features/planning/api";
+import {
+  useBillsQuery,
+  useDashboardQuery,
+  usePaySchedulesQuery,
+} from "@features/planning/queries";
 import { usePlanningRevision } from "@shared/api/planning-revision";
 import { useRefetchStaleOnFocus } from "@shared/api/use-refetch-stale-on-focus";
 import { getApiErrorMessage } from "@shared/lib/api-error";
-import {
-  firstName,
-  formatCurrency,
-  formatDateWithYear,
-} from "@shared/lib/format";
+import { formatCurrency, formatDateWithYear } from "@shared/lib/format";
 import {
   AppScreen,
-  EmptyState,
   ErrorState,
   LoadingState,
   PrimaryButton,
@@ -43,20 +47,6 @@ import {
 import { theme, withAlpha } from "@shared/ui/theme";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
-
-function statusTone(status: string) {
-  switch (status) {
-    case "paid":
-    case "received":
-      return "success" as const;
-    case "overdue":
-      return "danger" as const;
-    case "skipped":
-      return "warning" as const;
-    default:
-      return "neutral" as const;
-  }
-}
 
 function goalSubtitle(
   targetDate: string | null | undefined,
@@ -73,47 +63,14 @@ function goalSubtitle(
   return "Open-ended goal";
 }
 
-function sectionCountLabel(count: number, singular: string, plural: string) {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function DashboardHeader({
-  userName,
-  onOpenDrawer,
-}: {
-  userName?: string | null;
-  onOpenDrawer: () => void;
-}) {
-  return (
-    <View style={styles.header}>
-      <View style={styles.headerCopy}>
-        <Text style={styles.headerEyebrow}>Home</Text>
-        <Text style={styles.headerTitle}>
-          {`Welcome back, ${firstName(userName)}`}
-        </Text>
-        <Text style={styles.headerSubtitle}>
-          Focus on the next paycheck, what needs coverage, and the few things
-          that could knock the plan off track.
-        </Text>
-      </View>
-      <Pressable
-        accessibilityHint="Opens account and settings options."
-        accessibilityLabel="Open account drawer"
-        hitSlop={10}
-        onPress={onOpenDrawer}
-        style={({ pressed }) => [
-          styles.accountButton,
-          pressed ? styles.accountButtonPressed : null,
-        ]}
-      >
-        <MaterialCommunityIcons
-          color={theme.colors.ink}
-          name="account-cog-outline"
-          size={22}
-        />
-      </Pressable>
-    </View>
-  );
+/**
+ * Bills the user has already handled should not keep the plan looking unfinished,
+ * but the API counts paid occurrences in these lists all the same.
+ */
+function outstandingCount(items: BillOccurrence[] | undefined) {
+  return (items ?? []).filter(
+    (item) => item.status !== "paid" && item.status !== "skipped",
+  ).length;
 }
 
 function AccountDrawerItem({
@@ -366,183 +323,64 @@ function AccountDrawer({
   );
 }
 
-function BillList({
-  items,
-  emptyTitle,
-  emptyBody,
-}: {
-  items: BillOccurrence[];
-  emptyTitle: string;
-  emptyBody: string;
-}) {
-  if (!items.length) {
-    return <EmptyState body={emptyBody} title={emptyTitle} />;
-  }
-
-  return (
-    <SurfaceCard>
-      {items.slice(0, 3).map((item) => (
-        <Row
-          key={String(item.id)}
-          badge={
-            <StatusBadge
-              label={item.status.replace("_", " ")}
-              tone={statusTone(item.status)}
-            />
-          }
-          subtitle={`Due ${formatDateWithYear(item.due_date)}`}
-          title={item.bill?.name ?? "Bill occurrence"}
-          value={formatCurrency(item.effective_amount ?? item.amount)}
-          valueTone={item.status === "overdue" ? "danger" : "default"}
-        />
-      ))}
-    </SurfaceCard>
-  );
-}
-
-function NextPaycheckCard({
-  dashboard,
-  onOpenPlan,
-  onAddPaycheck,
-  onAddBill,
-}: {
-  dashboard: DashboardResponse;
-  onOpenPlan: () => void;
-  onAddPaycheck: () => void;
-  onAddBill: () => void;
-}) {
-  const nextPaycheck = dashboard.next_paycheck;
-  const dueCount = dashboard.bills_due_before_next_paycheck.length;
-  const uncoveredCount = dashboard.unassigned_bill_occurrences.length;
-
-  if (!nextPaycheck) {
-    return (
-      <SurfaceCard tone="dark" style={styles.primaryCard}>
-        <View style={styles.cardCopy}>
-          <Text style={styles.cardEyebrow}>Start your plan</Text>
-          <Text style={styles.cardHeadline}>Add your first paycheck</Text>
-          <Text style={styles.cardBody}>
-            PaydayPlanner works best once the next income date is in place. Add
-            a paycheck first, then bills and savings can anchor around it.
-          </Text>
-        </View>
-        <View style={styles.primaryActions}>
-          <PrimaryButton
-            icon="cash-plus"
-            label="Add paycheck"
-            onPress={onAddPaycheck}
-          />
-          <SecondaryButton
-            icon="receipt-text-plus-outline"
-            label="Add bill"
-            onPress={onAddBill}
-          />
-        </View>
-      </SurfaceCard>
-    );
-  }
-
-  return (
-    <SurfaceCard tone="dark" style={styles.primaryCard}>
-      <View style={styles.cardIntroRow}>
-        <StatusBadge
-          label={nextPaycheck.status}
-          tone={statusTone(nextPaycheck.status)}
-        />
-      </View>
-
-      <View style={styles.cardCopy}>
-        <Text style={styles.cardEyebrow}>Next paycheck</Text>
-        <View style={styles.cardHeadlineRow}>
-          <View style={styles.cardHeadlineCopy}>
-            <Text style={styles.cardHeadline}>
-              {nextPaycheck.pay_schedule?.name ?? "Upcoming paycheck"}
-            </Text>
-            <Text style={styles.cardBody}>
-              Lands {formatDateWithYear(nextPaycheck.occurrence_date)}
-            </Text>
-          </View>
-          <Text style={styles.cardSideValue}>
-            {formatCurrency(
-              nextPaycheck.effective_amount ?? nextPaycheck.amount,
-            )}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.availableBlock}>
-        <Text style={styles.availableLabel}>Available after bills</Text>
-        <Text style={styles.availableValue}>
-          {formatCurrency(nextPaycheck.remaining_amount)}
-        </Text>
-        <Text style={styles.availableBody}>
-          {dueCount > 0
-            ? `${sectionCountLabel(dueCount, "bill needs", "bills need")} coverage before this paycheck lands.`
-            : `You are clear until this income date.`}
-          {uncoveredCount > 0
-            ? ` ${sectionCountLabel(uncoveredCount, "item", "items")} elsewhere in this window still need assignment.`
-            : ""}
-        </Text>
-      </View>
-
-      <View style={styles.primaryStats}>
-        <View style={styles.primaryStat}>
-          <Text style={styles.primaryStatLabel}>Paycheck</Text>
-          <Text style={styles.primaryStatValue}>
-            {formatCurrency(
-              nextPaycheck.effective_amount ?? nextPaycheck.amount,
-            )}
-          </Text>
-        </View>
-        <View style={styles.primaryDivider} />
-        <View style={styles.primaryStat}>
-          <Text style={styles.primaryStatLabel}>Bills queued</Text>
-          <Text style={styles.primaryStatValue}>
-            {formatCurrency(nextPaycheck.assigned_total)}
-          </Text>
-        </View>
-        <View style={styles.primaryDivider} />
-        <View style={styles.primaryStat}>
-          <Text style={styles.primaryStatLabel}>Savings reserved</Text>
-          <Text style={styles.primaryStatValue}>
-            {formatCurrency(nextPaycheck.savings_goal_total)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.primaryActions}>
-        <PrimaryButton
-          icon="timeline-text-outline"
-          label="Review plan"
-          onPress={onOpenPlan}
-        />
-        <SecondaryButton
-          icon="receipt-text-plus-outline"
-          label="Add bill"
-          onPress={onAddBill}
-        />
-      </View>
-    </SurfaceCard>
-  );
-}
-
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const planningRevision = usePlanningRevision();
-  const dashboardQuery = useDashboardQuery({
-    revision: planningRevision,
-    userId: user?.id,
-  });
+  const scope = { revision: planningRevision, userId: user?.id };
+  const dashboardQuery = useDashboardQuery(scope);
   const dashboard = dashboardQuery.data ?? null;
   const loading = dashboardQuery.isPending && !dashboard;
   const refreshing = dashboardQuery.isRefetching && !dashboardQuery.isPending;
   const error = dashboardQuery.error
     ? getApiErrorMessage(dashboardQuery.error)
     : null;
+  const { isFirstOpen, markSeen } = useHomeIntro(user?.id);
 
   useRefetchStaleOnFocus(dashboardQuery);
+
+  useEffect(() => {
+    if (isFirstOpen === null) return;
+
+    markSeen();
+  }, [isFirstOpen, markSeen]);
+
+  // Both follow-up queries only run when the dashboard alone cannot tell the
+  // onboarding states apart, so the common case stays a single request.
+  const needsPaySchedules = Boolean(
+    dashboard && !dashboard.next_paycheck && isFirstOpen === false,
+  );
+  const paySchedulesQuery = usePaySchedulesQuery(scope, {
+    enabled: needsPaySchedules,
+  });
+
+  const billSignal = dashboard
+    ? Number(dashboard.next_paycheck?.assigned_total ?? 0) > 0 ||
+      dashboard.bills_due_before_next_paycheck.length > 0 ||
+      dashboard.unassigned_bill_occurrences.length > 0
+    : false;
+  const needsBills = Boolean(dashboard?.next_paycheck) && !billSignal;
+  const billsQuery = useBillsQuery(scope, { enabled: needsBills });
+
+  const hasPaySchedules =
+    needsPaySchedules && paySchedulesQuery.data
+      ? paySchedulesQuery.data.length > 0
+      : null;
+  const hasBills = !needsBills
+    ? true
+    : billsQuery.data
+      ? billsQuery.data.length > 0
+      : null;
+
+  const heroState = dashboard
+    ? resolveHomeHeroState({
+        dashboard,
+        hasBills,
+        hasPaySchedules,
+        isFirstOpen,
+      })
+    : null;
 
   const openAccount = useCallback(() => {
     setDrawerOpen(false);
@@ -564,9 +402,14 @@ export default function DashboardScreen() {
     void signOut();
   }, [signOut]);
 
-  const dueCount = dashboard?.bills_due_before_next_paycheck.length ?? 0;
-  const uncoveredCount = dashboard?.unassigned_bill_occurrences.length ?? 0;
-  const bothCriticalSectionsClear = dueCount === 0 && uncoveredCount === 0;
+  const dueCount = outstandingCount(dashboard?.bills_due_before_next_paycheck);
+  const uncoveredCount = outstandingCount(
+    dashboard?.unassigned_bill_occurrences,
+  );
+  // Only meaningful once there is a real plan — an account with no paycheck yet
+  // is not "on track", it is empty.
+  const bothCriticalSectionsClear =
+    heroState?.kind === "ready" && dueCount === 0 && uncoveredCount === 0;
 
   return (
     <>
@@ -581,11 +424,11 @@ export default function DashboardScreen() {
           />
         }
       >
-        <DashboardHeader
+        <NextUpHeader
           onOpenDrawer={() => {
             setDrawerOpen(true);
           }}
-          userName={user?.name}
+          title={heroState ? homeHeaderTitle(heroState) : "Next up"}
         />
 
         {loading ? (
@@ -598,9 +441,9 @@ export default function DashboardScreen() {
             }}
             title="Dashboard unavailable"
           />
-        ) : dashboard ? (
+        ) : dashboard && heroState ? (
           <>
-            <NextPaycheckCard
+            <NextUpCard
               dashboard={dashboard}
               onAddBill={() => {
                 router.push("/bills/new");
@@ -608,9 +451,10 @@ export default function DashboardScreen() {
               onAddPaycheck={() => {
                 router.push("/pay-schedules/new");
               }}
-              onOpenPlan={() => {
-                router.push("/plan");
+              onOpenPaychecks={() => {
+                router.push("/paychecks");
               }}
+              state={heroState}
             />
 
             {bothCriticalSectionsClear ? (
@@ -629,47 +473,8 @@ export default function DashboardScreen() {
               </SurfaceCard>
             ) : null}
 
-            {dueCount > 0 ? (
-              <>
-                <SectionTitle
-                  action={
-                    <StatusBadge
-                      label={sectionCountLabel(dueCount, "bill", "bills")}
-                      tone="warning"
-                    />
-                  }
-                  subtitle="These bills need funding before the next payday lands."
-                  title="Due before next paycheck"
-                />
-                <BillList
-                  emptyBody="You are clear until the next income date."
-                  emptyTitle="Nothing due"
-                  items={dashboard.bills_due_before_next_paycheck}
-                />
-              </>
-            ) : null}
-
-            {uncoveredCount > 0 ? (
-              <>
-                <SectionTitle
-                  action={
-                    <SecondaryButton
-                      icon="timeline-text-outline"
-                      label="Assign in plan"
-                      onPress={() => {
-                        router.push("/plan");
-                      }}
-                    />
-                  }
-                  subtitle="These items still do not have a paycheck covering them."
-                  title="Needs funding"
-                />
-                <BillList
-                  emptyBody="Everything visible in this current planning window has funding assigned."
-                  emptyTitle="All set"
-                  items={dashboard.unassigned_bill_occurrences}
-                />
-              </>
+            {heroState.kind === "ready" ? (
+              <DueBillsCard dashboard={dashboard} />
             ) : null}
 
             {dashboard.insights.tightest_paycheck ||
@@ -787,138 +592,8 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: theme.spacing.md,
-  },
-  headerCopy: {
-    flex: 1,
-    gap: theme.spacing.xs,
-  },
-  headerEyebrow: {
-    color: theme.colors.primaryStrong,
-    ...theme.typography.eyebrow,
-  },
-  headerTitle: {
-    color: theme.colors.text,
-    ...theme.typography.title,
-  },
-  headerSubtitle: {
-    color: theme.colors.muted,
-    ...theme.typography.body,
-  },
-  accountButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: withAlpha(theme.colors.white, 0.82),
-    alignItems: "center",
-    justifyContent: "center",
-  },
   accountButtonPressed: {
     opacity: 0.8,
-  },
-  primaryCard: {
-    gap: theme.spacing.lg,
-  },
-  cardIntroRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.sm,
-  },
-  cardCopy: {
-    gap: theme.spacing.sm,
-  },
-  cardEyebrow: {
-    color: withAlpha(theme.colors.white, 0.7),
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  cardHeadlineRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: theme.spacing.md,
-  },
-  cardHeadlineCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  cardHeadline: {
-    color: theme.colors.white,
-    fontSize: 28,
-    fontWeight: "800",
-    letterSpacing: -0.8,
-  },
-  cardSideValue: {
-    color: theme.colors.white,
-    fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: -0.4,
-  },
-  cardBody: {
-    color: withAlpha(theme.colors.white, 0.72),
-    ...theme.typography.body,
-  },
-  availableBlock: {
-    gap: theme.spacing.xs,
-  },
-  availableLabel: {
-    color: withAlpha(theme.colors.white, 0.62),
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.9,
-    textTransform: "uppercase",
-  },
-  availableValue: {
-    color: theme.colors.white,
-    fontSize: 42,
-    fontWeight: "800",
-    letterSpacing: -1,
-  },
-  availableBody: {
-    color: withAlpha(theme.colors.white, 0.72),
-    ...theme.typography.body,
-  },
-  primaryStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.md,
-    borderRadius: theme.radius.md,
-    backgroundColor: withAlpha(theme.colors.white, 0.08),
-    padding: theme.spacing.md,
-  },
-  primaryStat: {
-    flex: 1,
-    gap: 4,
-  },
-  primaryStatLabel: {
-    color: withAlpha(theme.colors.white, 0.62),
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  primaryStatValue: {
-    color: theme.colors.white,
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  primaryDivider: {
-    width: 1,
-    alignSelf: "stretch",
-    backgroundColor: withAlpha(theme.colors.white, 0.12),
-  },
-  primaryActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.sm,
   },
   goalCallout: {
     flexDirection: "row",
