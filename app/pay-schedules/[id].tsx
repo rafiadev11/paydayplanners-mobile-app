@@ -182,7 +182,7 @@ export default function EditPayScheduleScreen() {
 
     try {
       await deletePaySchedule(id);
-      router.replace("/paychecks");
+      router.replace("/money?tab=income");
     } catch (nextError) {
       setError(getApiErrorMessage(nextError));
       setDeleting(false);

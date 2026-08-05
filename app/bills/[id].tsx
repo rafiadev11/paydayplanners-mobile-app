@@ -188,7 +188,7 @@ export default function EditBillScreen() {
         // Deleting the bill succeeded; reminder refresh can recover later.
       }
 
-      router.replace("/bills");
+      router.replace("/money?tab=bills");
     } catch (nextError) {
       setError(getApiErrorMessage(nextError));
       setDeleting(false);

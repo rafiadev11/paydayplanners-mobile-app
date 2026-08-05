@@ -1,6 +1,6 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
+import { AccountButton } from "@features/account/account-drawer";
 import {
   type BillOccurrence,
   type DashboardResponse,
@@ -228,22 +228,7 @@ export function NextUpHeader({
         </Text>
         <Text style={styles.headerTitle}>{title}</Text>
       </View>
-      <Pressable
-        accessibilityHint="Opens account and settings options."
-        accessibilityLabel="Open account drawer"
-        hitSlop={10}
-        onPress={onOpenDrawer}
-        style={({ pressed }) => [
-          styles.accountButton,
-          pressed ? styles.accountButtonPressed : null,
-        ]}
-      >
-        <MaterialCommunityIcons
-          color={theme.colors.ink}
-          name="account-outline"
-          size={24}
-        />
-      </Pressable>
+      <AccountButton onPress={onOpenDrawer} />
     </View>
   );
 }
@@ -413,19 +398,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: theme.colors.text,
     ...theme.typography.title,
-  },
-  accountButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: withAlpha(theme.colors.white, 0.82),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  accountButtonPressed: {
-    opacity: 0.8,
   },
   card: {
     gap: theme.spacing.md,

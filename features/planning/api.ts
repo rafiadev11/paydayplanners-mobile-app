@@ -261,9 +261,19 @@ export async function fetchDashboard() {
   return data;
 }
 
-export async function fetchForecast(days = 365) {
+export type ForecastWindow = {
+  start_date: string;
+  end_date: string;
+};
+
+/**
+ * Forecast over an explicit window. `buildWindow` anchors at today, which cannot
+ * render the days already gone by in the current month, so the calendar names
+ * its own start date.
+ */
+export async function fetchForecastWindow(window: ForecastWindow) {
   const { data } = await api.get<ForecastResponse>("/api/v1/forecast", {
-    params: buildWindow(days),
+    params: window,
   });
   return data;
 }

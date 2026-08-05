@@ -70,29 +70,20 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="plan"
+        name="money"
         options={{
-          title: "Plan",
+          title: "Money",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon color={color} name="timeline-text-outline" />
+            <TabBarIcon color={color} name="wallet-outline" />
           ),
         }}
       />
       <Tabs.Screen
-        name="paychecks"
+        name="calendar"
         options={{
-          title: "Paychecks",
+          title: "Calendar",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon color={color} name="cash-fast" />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="bills"
-        options={{
-          title: "Bills",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon color={color} name="receipt-text-outline" />
+            <TabBarIcon color={color} name="calendar-month-outline" />
           ),
         }}
       />

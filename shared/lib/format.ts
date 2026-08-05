@@ -101,6 +101,15 @@ export function formatDateWithYear(value: string | null | undefined) {
     : "Not scheduled";
 }
 
+export function formatMonthYear(value: string | null | undefined) {
+  return value
+    ? formatParsedDate(parseDateValue(value), {
+        month: "short",
+        year: "numeric",
+      })
+    : "Not scheduled";
+}
+
 export function formatWeekdayDate(value: string | null | undefined) {
   return value
     ? formatParsedDate(parseDateValue(value), {
@@ -116,6 +125,16 @@ export function formatLongWeekdayDate(value: string | null | undefined) {
     ? formatParsedDate(parseDateValue(value), {
         weekday: "long",
         month: "short",
+        day: "numeric",
+      })
+    : "Not scheduled";
+}
+
+/** Full month and day without a year, e.g. `"August 6"`. */
+export function formatMonthDayLong(value: string | null | undefined) {
+  return value
+    ? formatParsedDate(parseDateValue(value), {
+        month: "long",
         day: "numeric",
       })
     : "Not scheduled";

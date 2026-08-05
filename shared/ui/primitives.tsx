@@ -24,12 +24,14 @@ import { theme, withAlpha } from "@shared/ui/theme";
 type AppScreenProps = {
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  /** Pinned above the scroll content, bottom-right — see `FloatingActionButton`. */
+  floatingAction?: ReactNode;
   refreshControl?: ReactElement<RefreshControlProps>;
   topInset?: boolean;
 };
 
 type ScreenHeaderProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   right?: ReactNode;
@@ -120,6 +122,7 @@ const badgeToneStyles = {
 export function AppScreen({
   children,
   contentContainerStyle,
+  floatingAction,
   refreshControl,
   topInset = true,
 }: AppScreenProps) {
@@ -137,6 +140,9 @@ export function AppScreen({
       >
         {children}
       </ScrollView>
+      {floatingAction ? (
+        <View style={styles.floatingAction}>{floatingAction}</View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -150,7 +156,7 @@ export function ScreenHeader({
   return (
     <View style={styles.screenHeader}>
       <View style={styles.screenHeaderCopy}>
-        <Text style={styles.eyebrow}>{eyebrow}</Text>
+        {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
         <Text style={styles.screenTitle}>{title}</Text>
         {subtitle ? (
           <Text style={styles.screenSubtitle}>{subtitle}</Text>
@@ -288,6 +294,34 @@ export function SecondaryButton({
       >
         {label}
       </Text>
+    </Pressable>
+  );
+}
+
+export function FloatingActionButton({
+  accessibilityLabel,
+  icon = "plus",
+  onPress,
+}: {
+  accessibilityLabel: string;
+  icon?: keyof typeof MaterialCommunityIcons.glyphMap;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.fab,
+        pressed ? styles.buttonPressed : null,
+      ]}
+    >
+      <MaterialCommunityIcons
+        color={theme.colors.white}
+        name={icon}
+        size={28}
+      />
     </Pressable>
   );
 }
@@ -474,6 +508,22 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.lg,
     paddingBottom: 128,
     gap: theme.spacing.lg,
+  },
+  floatingAction: {
+    position: "absolute",
+    right: theme.spacing.lg,
+    // The tab navigator already keeps its bar out of this container, so this
+    // only has to clear the container's own edge.
+    bottom: theme.spacing.xl,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.ink,
+    ...theme.shadows.card,
   },
   topInkOrb: {
     position: "absolute",
