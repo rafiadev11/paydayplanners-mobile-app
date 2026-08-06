@@ -23,6 +23,8 @@ type DatePickerFieldProps = {
   value: string;
   onChange: (value: string) => void;
   hint?: string;
+  /** Shown in place of the hint, with a danger border. */
+  error?: string;
   placeholder?: string;
   minimumDate?: string;
   maximumDate?: string;
@@ -75,6 +77,7 @@ export function DatePickerField({
   value,
   onChange,
   hint,
+  error,
   placeholder = "Select a date",
   minimumDate,
   maximumDate,
@@ -142,6 +145,7 @@ export function DatePickerField({
           styles.trigger,
           pressed ? styles.triggerPressed : null,
           open ? styles.triggerOpen : null,
+          error ? styles.triggerError : null,
         ]}
       >
         <View style={styles.triggerCopy}>
@@ -168,7 +172,11 @@ export function DatePickerField({
       ) : null}
       {Platform.OS !== "ios" && open ? picker : null}
 
-      {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+      {error ? (
+        <Text style={styles.error}>{error}</Text>
+      ) : hint ? (
+        <Text style={styles.hint}>{hint}</Text>
+      ) : null}
     </View>
   );
 }
@@ -212,6 +220,9 @@ const styles = StyleSheet.create({
   triggerOpen: {
     borderColor: theme.colors.primary,
   },
+  triggerError: {
+    borderColor: theme.colors.danger,
+  },
   triggerCopy: {
     flexDirection: "row",
     alignItems: "center",
@@ -237,5 +248,11 @@ const styles = StyleSheet.create({
     color: theme.colors.muted,
     fontSize: 12,
     lineHeight: 18,
+  },
+  error: {
+    color: theme.colors.danger,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "600",
   },
 });

@@ -65,6 +65,8 @@ type ButtonProps = {
 type FieldProps = TextInputProps & {
   label: string;
   hint?: string;
+  /** Shown in place of the hint, with a danger border. */
+  error?: string;
 };
 
 type ChoiceChipProps = {
@@ -326,16 +328,24 @@ export function FloatingActionButton({
   );
 }
 
-export function Field({ label, hint, style, ...props }: FieldProps) {
+export function Field({ label, hint, error, style, ...props }: FieldProps) {
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
         placeholderTextColor={theme.colors.muted}
-        style={[styles.fieldInput, style]}
+        style={[
+          styles.fieldInput,
+          error ? styles.fieldInputError : null,
+          style,
+        ]}
         {...props}
       />
-      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+      {error ? (
+        <Text style={styles.fieldError}>{error}</Text>
+      ) : hint ? (
+        <Text style={styles.fieldHint}>{hint}</Text>
+      ) : null}
     </View>
   );
 }
@@ -343,6 +353,7 @@ export function Field({ label, hint, style, ...props }: FieldProps) {
 export function CurrencyField({
   label,
   hint,
+  error,
   style,
   value,
   onChangeText,
@@ -375,11 +386,19 @@ export function CurrencyField({
         }}
         placeholder={placeholder}
         placeholderTextColor={theme.colors.muted}
-        style={[styles.fieldInput, style]}
+        style={[
+          styles.fieldInput,
+          error ? styles.fieldInputError : null,
+          style,
+        ]}
         value={displayValue}
         {...props}
       />
-      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+      {error ? (
+        <Text style={styles.fieldError}>{error}</Text>
+      ) : hint ? (
+        <Text style={styles.fieldHint}>{hint}</Text>
+      ) : null}
     </View>
   );
 }
@@ -721,6 +740,15 @@ const styles = StyleSheet.create({
     color: theme.colors.muted,
     fontSize: 12,
     lineHeight: 18,
+  },
+  fieldInputError: {
+    borderColor: theme.colors.danger,
+  },
+  fieldError: {
+    color: theme.colors.danger,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "600",
   },
   choiceChip: {
     borderRadius: theme.radius.pill,

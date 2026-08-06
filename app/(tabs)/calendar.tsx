@@ -14,13 +14,13 @@ import { DayDetail } from "@features/calendar/day-detail";
 import { MonthGrid } from "@features/calendar/month-grid";
 import { MonthSummaryCard } from "@features/calendar/month-summary-card";
 import { useForecastWindowQuery } from "@features/planning/queries";
+import { forecastWindowForMonth } from "@features/planning/window";
 import { usePlanningRevision } from "@shared/api/planning-revision";
 import { useRefetchStaleOnFocus } from "@shared/api/use-refetch-stale-on-focus";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   addMonths,
   compareMonths,
-  endOfMonthIso,
   monthKeyOf,
   monthLabel,
   startOfMonthIso,
@@ -38,7 +38,6 @@ import { theme } from "@shared/ui/theme";
 
 /** How far back the calendar will look, so the fetched window cannot balloon. */
 const HISTORY_LIMIT_MONTHS = 12;
-const FORECAST_SPAN_MONTHS = 12;
 
 export default function CalendarScreen() {
   const router = useRouter();
@@ -62,10 +61,7 @@ export default function CalendarScreen() {
     compareMonths(visibleMonth, currentMonth) < 0 ? visibleMonth : currentMonth;
 
   const forecastWindow = useMemo(
-    () => ({
-      start_date: startOfMonthIso(anchorMonth),
-      end_date: endOfMonthIso(addMonths(anchorMonth, FORECAST_SPAN_MONTHS)),
-    }),
+    () => forecastWindowForMonth(anchorMonth),
     [anchorMonth],
   );
 
