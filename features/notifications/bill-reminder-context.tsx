@@ -327,7 +327,7 @@ async function scheduleGroupedReminders(
           data: {
             type: BILL_REMINDER_NOTIFICATION_TYPE,
             userId: key,
-            screen: "/bills",
+            screen: "/money?tab=bills",
           },
         },
         trigger: {
@@ -417,8 +417,10 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
       (response) => {
         const screen = response.notification.request.content.data?.screen;
 
-        if (screen === "/bills") {
-          router.push("/bills");
+        // Reminders scheduled before bills moved into Money still carry the
+        // old screen value, so both spellings have to land in the same place.
+        if (screen === "/bills" || screen === "/money?tab=bills") {
+          router.push("/money?tab=bills");
         }
       },
     );

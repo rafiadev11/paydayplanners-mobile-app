@@ -18,7 +18,15 @@
       "bundleIdentifier": "com.paydayplanners.app",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Allow PaydayPlanner to use Face ID to protect your paycheck and billing details.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSExceptionDomains": {
+            "paydayplanners.test": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": true
+            }
+          }
+        }
       }
     },
     "android": {

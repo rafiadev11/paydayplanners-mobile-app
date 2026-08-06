@@ -152,13 +152,10 @@ function RootNavigator() {
               ...modalOptions,
             }}
           />
-          <Stack.Screen
-            name="goals"
-            options={{
-              title: "Goals",
-              headerBackButtonDisplayMode: "minimal",
-            }}
-          />
+          {/* Legacy routes, now redirects into the Money tab. */}
+          <Stack.Screen name="goals" options={{ headerShown: false }} />
+          <Stack.Screen name="paychecks" options={{ headerShown: false }} />
+          <Stack.Screen name="bills/index" options={{ headerShown: false }} />
           <Stack.Screen
             name="pay-schedules/new"
             options={{

@@ -24,12 +24,14 @@ import { theme, withAlpha } from "@shared/ui/theme";
 type AppScreenProps = {
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  /** Pinned above the scroll content, bottom-right — see `FloatingActionButton`. */
+  floatingAction?: ReactNode;
   refreshControl?: ReactElement<RefreshControlProps>;
   topInset?: boolean;
 };
 
 type ScreenHeaderProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle?: string;
   right?: ReactNode;
@@ -57,11 +59,14 @@ type ButtonProps = {
   onPress: () => void;
   disabled?: boolean;
   icon?: keyof typeof MaterialCommunityIcons.glyphMap;
+  size?: "sm" | "md";
 };
 
 type FieldProps = TextInputProps & {
   label: string;
   hint?: string;
+  /** Shown in place of the hint, with a danger border. */
+  error?: string;
 };
 
 type ChoiceChipProps = {
@@ -119,6 +124,7 @@ const badgeToneStyles = {
 export function AppScreen({
   children,
   contentContainerStyle,
+  floatingAction,
   refreshControl,
   topInset = true,
 }: AppScreenProps) {
@@ -136,6 +142,9 @@ export function AppScreen({
       >
         {children}
       </ScrollView>
+      {floatingAction ? (
+        <View style={styles.floatingAction}>{floatingAction}</View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -149,7 +158,7 @@ export function ScreenHeader({
   return (
     <View style={styles.screenHeader}>
       <View style={styles.screenHeaderCopy}>
-        <Text style={styles.eyebrow}>{eyebrow}</Text>
+        {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
         <Text style={styles.screenTitle}>{title}</Text>
         {subtitle ? (
           <Text style={styles.screenSubtitle}>{subtitle}</Text>
@@ -257,13 +266,17 @@ export function SecondaryButton({
   onPress,
   disabled,
   icon,
+  size = "md",
 }: ButtonProps) {
+  const small = size === "sm";
+
   return (
     <Pressable
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.secondaryButton,
+        small ? styles.secondaryButtonSmall : null,
         pressed && !disabled ? styles.buttonPressed : null,
         disabled ? styles.buttonDisabled : null,
       ]}
@@ -272,24 +285,67 @@ export function SecondaryButton({
         <MaterialCommunityIcons
           color={theme.colors.ink}
           name={icon}
-          size={18}
+          size={small ? 15 : 18}
         />
       ) : null}
-      <Text style={styles.secondaryButtonLabel}>{label}</Text>
+      <Text
+        style={[
+          styles.secondaryButtonLabel,
+          small ? styles.secondaryButtonLabelSmall : null,
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
-export function Field({ label, hint, style, ...props }: FieldProps) {
+export function FloatingActionButton({
+  accessibilityLabel,
+  icon = "plus",
+  onPress,
+}: {
+  accessibilityLabel: string;
+  icon?: keyof typeof MaterialCommunityIcons.glyphMap;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.fab,
+        pressed ? styles.buttonPressed : null,
+      ]}
+    >
+      <MaterialCommunityIcons
+        color={theme.colors.white}
+        name={icon}
+        size={28}
+      />
+    </Pressable>
+  );
+}
+
+export function Field({ label, hint, error, style, ...props }: FieldProps) {
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
         placeholderTextColor={theme.colors.muted}
-        style={[styles.fieldInput, style]}
+        style={[
+          styles.fieldInput,
+          error ? styles.fieldInputError : null,
+          style,
+        ]}
         {...props}
       />
-      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+      {error ? (
+        <Text style={styles.fieldError}>{error}</Text>
+      ) : hint ? (
+        <Text style={styles.fieldHint}>{hint}</Text>
+      ) : null}
     </View>
   );
 }
@@ -297,6 +353,7 @@ export function Field({ label, hint, style, ...props }: FieldProps) {
 export function CurrencyField({
   label,
   hint,
+  error,
   style,
   value,
   onChangeText,
@@ -329,11 +386,19 @@ export function CurrencyField({
         }}
         placeholder={placeholder}
         placeholderTextColor={theme.colors.muted}
-        style={[styles.fieldInput, style]}
+        style={[
+          styles.fieldInput,
+          error ? styles.fieldInputError : null,
+          style,
+        ]}
         value={displayValue}
         {...props}
       />
-      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+      {error ? (
+        <Text style={styles.fieldError}>{error}</Text>
+      ) : hint ? (
+        <Text style={styles.fieldHint}>{hint}</Text>
+      ) : null}
     </View>
   );
 }
@@ -462,6 +527,22 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.lg,
     paddingBottom: 128,
     gap: theme.spacing.lg,
+  },
+  floatingAction: {
+    position: "absolute",
+    right: theme.spacing.lg,
+    // The tab navigator already keeps its bar out of this container, so this
+    // only has to clear the container's own edge.
+    bottom: theme.spacing.xl,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.ink,
+    ...theme.shadows.card,
   },
   topInkOrb: {
     position: "absolute",
@@ -617,10 +698,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  secondaryButtonSmall: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    gap: 6,
+  },
   secondaryButtonLabel: {
     color: theme.colors.ink,
     fontSize: 14,
     fontWeight: "700",
+  },
+  secondaryButtonLabelSmall: {
+    fontSize: 13,
   },
   buttonPressed: {
     opacity: 0.82,
@@ -651,6 +740,15 @@ const styles = StyleSheet.create({
     color: theme.colors.muted,
     fontSize: 12,
     lineHeight: 18,
+  },
+  fieldInputError: {
+    borderColor: theme.colors.danger,
+  },
+  fieldError: {
+    color: theme.colors.danger,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "600",
   },
   choiceChip: {
     borderRadius: theme.radius.pill,

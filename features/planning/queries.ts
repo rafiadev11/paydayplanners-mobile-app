@@ -5,13 +5,13 @@ import {
 } from "@tanstack/react-query";
 
 import {
-  fetchBillOccurrences,
   fetchBills,
   fetchDashboard,
-  fetchForecast,
+  fetchForecastWindow,
   fetchPaycheckOccurrences,
   fetchPaySchedules,
   fetchSavingsGoals,
+  type ForecastWindow,
 } from "@features/planning/api";
 import { API_BASE_URL } from "@shared/lib/env";
 import { getAppTimezone, todayInAppTimezone } from "@shared/lib/timezone";
@@ -38,11 +38,14 @@ export const planningKeys = {
   all: (scope: PlanningScope) => scopeKey(scope),
   dashboard: (scope: PlanningScope) =>
     [...scopeKey(scope), "dashboard"] as const,
-  forecast: (scope: PlanningScope, days = DEFAULT_WINDOW_DAYS) =>
-    [...scopeKey(scope), "forecast", days] as const,
+  forecastWindow: (scope: PlanningScope, window: ForecastWindow) =>
+    [
+      ...scopeKey(scope),
+      "forecast-window",
+      window.start_date,
+      window.end_date,
+    ] as const,
   bills: (scope: PlanningScope) => [...scopeKey(scope), "bills"] as const,
-  billOccurrences: (scope: PlanningScope, days = DEFAULT_WINDOW_DAYS) =>
-    [...scopeKey(scope), "bill-occurrences", days] as const,
   paySchedules: (scope: PlanningScope) =>
     [...scopeKey(scope), "pay-schedules"] as const,
   paycheckOccurrences: (scope: PlanningScope, days = DEFAULT_WINDOW_DAYS) =>
@@ -51,8 +54,12 @@ export const planningKeys = {
     [...scopeKey(scope), "savings-goals"] as const,
 };
 
-function enabled(scope: PlanningScope) {
-  return Boolean(scope.userId);
+type QueryGate = {
+  enabled?: boolean;
+};
+
+function enabled(scope: PlanningScope, gate?: QueryGate) {
+  return Boolean(scope.userId) && gate?.enabled !== false;
 }
 
 export function useDashboardQuery(scope: PlanningScope) {
@@ -64,42 +71,31 @@ export function useDashboardQuery(scope: PlanningScope) {
   });
 }
 
-export function useForecastQuery(
+export function useForecastWindowQuery(
   scope: PlanningScope,
-  days = DEFAULT_WINDOW_DAYS,
+  window: ForecastWindow,
+  gate?: QueryGate,
 ) {
   return useQuery({
-    enabled: enabled(scope),
+    enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
-    queryFn: () => fetchForecast(days),
-    queryKey: planningKeys.forecast(scope, days),
+    queryFn: () => fetchForecastWindow(window),
+    queryKey: planningKeys.forecastWindow(scope, window),
   });
 }
 
-export function useBillsQuery(scope: PlanningScope) {
+export function useBillsQuery(scope: PlanningScope, gate?: QueryGate) {
   return useQuery({
-    enabled: enabled(scope),
+    enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
     queryFn: fetchBills,
     queryKey: planningKeys.bills(scope),
   });
 }
 
-export function useBillOccurrencesQuery(
-  scope: PlanningScope,
-  days = DEFAULT_WINDOW_DAYS,
-) {
+export function usePaySchedulesQuery(scope: PlanningScope, gate?: QueryGate) {
   return useQuery({
-    enabled: enabled(scope),
-    placeholderData: keepPreviousData,
-    queryFn: () => fetchBillOccurrences(days),
-    queryKey: planningKeys.billOccurrences(scope, days),
-  });
-}
-
-export function usePaySchedulesQuery(scope: PlanningScope) {
-  return useQuery({
-    enabled: enabled(scope),
+    enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
     queryFn: fetchPaySchedules,
     queryKey: planningKeys.paySchedules(scope),

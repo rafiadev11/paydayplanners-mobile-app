@@ -66,6 +66,8 @@ export type PaycheckOccurrence = {
   pay_schedule?: PaySchedule | null;
 };
 
+export type BillOccurrenceStatus = "projected" | "paid" | "overdue" | "skipped";
+
 export type BillOccurrence = {
   id: number | string;
   bill_id?: number | string;
@@ -77,6 +79,7 @@ export type BillOccurrence = {
   unfunded_amount?: string | null;
   notes?: string | null;
   assigned_paycheck_occurrence_id?: number | string | null;
+  assigned_paycheck_occurrence?: PaycheckOccurrence | null;
   is_assignment_manual?: boolean;
   status: string;
   bill?: Bill | null;
@@ -258,9 +261,19 @@ export async function fetchDashboard() {
   return data;
 }
 
-export async function fetchForecast(days = 365) {
+export type ForecastWindow = {
+  start_date: string;
+  end_date: string;
+};
+
+/**
+ * Forecast over an explicit window. `buildWindow` anchors at today, which cannot
+ * render the days already gone by in the current month, so the calendar names
+ * its own start date.
+ */
+export async function fetchForecastWindow(window: ForecastWindow) {
   const { data } = await api.get<ForecastResponse>("/api/v1/forecast", {
-    params: buildWindow(days),
+    params: window,
   });
   return data;
 }
@@ -375,6 +388,22 @@ export async function updateBill(id: number | string, input: BillInput) {
 
 export async function deleteBill(id: number | string) {
   await api.delete(`/api/v1/bills/${id}`);
+}
+
+/**
+ * Only ever send `status`. Passing `actual_amount` alongside it strands the
+ * occurrence: the assignment action skips non-projected rows, so its allocation
+ * freezes at the old amount and the bill stays unfunded forever.
+ */
+export async function updateBillOccurrenceStatus(
+  id: number | string,
+  status: BillOccurrenceStatus,
+) {
+  const { data } = await api.patch<
+    ItemEnvelope<BillOccurrence> | BillOccurrence
+  >(`/api/v1/bill-occurrences/${id}`, { status });
+
+  return item(data);
 }
 
 export async function createSavingsGoal(input: SavingsGoalInput) {

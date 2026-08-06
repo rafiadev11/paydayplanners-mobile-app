@@ -35,6 +35,11 @@ export const theme = {
     successSoft: "#D9EFE8",
     warning: "#B87932",
     warningSoft: "#F6E4CC",
+    // Meter segments, stepped for the ink surface. Validated for colour-vision
+    // separation against #132238 — keep the pair together if either changes.
+    meterBills: "#BE8A30",
+    meterSavings: "#1C9C7E",
+    onInkDanger: "#E8917F",
     border: "#D8CFBF",
     borderStrong: "#B9AB92",
     divider: "#E5DCCF",

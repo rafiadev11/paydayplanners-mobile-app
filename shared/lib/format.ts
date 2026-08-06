@@ -101,6 +101,59 @@ export function formatDateWithYear(value: string | null | undefined) {
     : "Not scheduled";
 }
 
+export function formatMonthYear(value: string | null | undefined) {
+  return value
+    ? formatParsedDate(parseDateValue(value), {
+        month: "short",
+        year: "numeric",
+      })
+    : "Not scheduled";
+}
+
+export function formatWeekdayDate(value: string | null | undefined) {
+  return value
+    ? formatParsedDate(parseDateValue(value), {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
+    : "Not scheduled";
+}
+
+export function formatLongWeekdayDate(value: string | null | undefined) {
+  return value
+    ? formatParsedDate(parseDateValue(value), {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      })
+    : "Not scheduled";
+}
+
+/** Full month and day without a year, e.g. `"August 6"`. */
+export function formatMonthDayLong(value: string | null | undefined) {
+  return value
+    ? formatParsedDate(parseDateValue(value), {
+        month: "long",
+        day: "numeric",
+      })
+    : "Not scheduled";
+}
+
+/** Split date for the calendar-chip UI, e.g. `{ month: "AUG", day: "6" }`. */
+export function formatDateChipParts(value: string | null | undefined) {
+  if (!value) {
+    return { month: "", day: "" };
+  }
+
+  const parsed = parseDateValue(value);
+
+  return {
+    month: formatParsedDate(parsed, { month: "short" }).toUpperCase(),
+    day: formatParsedDate(parsed, { day: "numeric" }),
+  };
+}
+
 export function formatLongWeekday(value: string | null | undefined) {
   return value
     ? formatParsedDate(parseDateValue(value), {
