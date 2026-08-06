@@ -74,9 +74,10 @@ export function useDashboardQuery(scope: PlanningScope) {
 export function useForecastWindowQuery(
   scope: PlanningScope,
   window: ForecastWindow,
+  gate?: QueryGate,
 ) {
   return useQuery({
-    enabled: enabled(scope),
+    enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
     queryFn: () => fetchForecastWindow(window),
     queryKey: planningKeys.forecastWindow(scope, window),

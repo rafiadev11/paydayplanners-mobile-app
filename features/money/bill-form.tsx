@@ -75,10 +75,6 @@ export function BillForm({
   const today = todayInAppTimezone();
   const planningRevision = usePlanningRevision();
   const forecastWindow = useMemo(() => currentForecastWindow(), []);
-  const forecastQuery = useForecastWindowQuery(
-    { revision: planningRevision, userId: user?.id },
-    forecastWindow,
-  );
 
   const [name, setName] = useState(bill?.name ?? "");
   const [amount, setAmount] = useState(bill?.amount ?? "");
@@ -157,6 +153,18 @@ export function BillForm({
       storedWeekday,
       today,
     ],
+  );
+
+  /**
+   * The forecast is a large payload for one sentence, so it is not requested
+   * until there is a date to judge coverage against — opening the form and
+   * backing out costs nothing. The window matches the Calendar tab's, so the
+   * response is usually already cached.
+   */
+  const forecastQuery = useForecastWindowQuery(
+    { revision: planningRevision, userId: user?.id },
+    forecastWindow,
+    { enabled: dates.length > 0 },
   );
 
   const coverage = useMemo(() => {
