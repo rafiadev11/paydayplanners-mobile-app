@@ -328,19 +328,20 @@ export function DayDetail({
   const activeBills = bills.filter((bill) => bill.status !== "skipped");
   const isToday = date === today;
 
-  const nextBill = findNextEventAfter(days, date, "bill");
-  const nextAnything = findNextEventAfter(days, date);
-
+  // Each call scans the whole 13-month day map, and the answer is only needed
+  // when the day has nothing due — so both stay inside the lazy branch.
   const quietSubtitle = () => {
+    const nextBill = findNextEventAfter(days, date, true);
+
     if (nextBill) {
-      return `Next bill is ${formatDate(nextBill.date)}`;
+      return `Next bill is ${formatDate(nextBill)}`;
     }
 
-    if (nextAnything) {
-      return `Next paycheck is ${formatDate(nextAnything.date)}`;
-    }
+    const nextAnything = findNextEventAfter(days, date);
 
-    return "Nothing else scheduled ahead";
+    return nextAnything
+      ? `Next paycheck is ${formatDate(nextAnything)}`
+      : "Nothing else scheduled ahead";
   };
 
   return (

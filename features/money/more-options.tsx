@@ -14,11 +14,9 @@ import { theme } from "@shared/ui/theme";
 export function MoreOptions({
   children,
   defaultExpanded = false,
-  label = "More options",
 }: {
   children: ReactNode;
   defaultExpanded?: boolean;
-  label?: string;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -40,7 +38,7 @@ export function MoreOptions({
           name={expanded ? "chevron-down" : "chevron-right"}
           size={20}
         />
-        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.label}>More options</Text>
       </Pressable>
 
       {expanded ? <View style={styles.body}>{children}</View> : null}

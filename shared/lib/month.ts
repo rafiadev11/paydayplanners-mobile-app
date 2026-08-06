@@ -26,7 +26,12 @@ function parseMonthKey(monthKey: string): MonthParts {
   return { year: Number(year), month: Number(month) };
 }
 
-function toIsoDate(date: Date) {
+/**
+ * The noon-UTC primitives. Exported so anything else doing bare-date arithmetic
+ * — `@shared/lib/recurrence` in particular — builds on the same convention
+ * rather than restating it.
+ */
+export function toIsoDate(date: Date) {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -34,8 +39,13 @@ function toIsoDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function utcNoon(year: number, month: number, day: number) {
+export function utcNoon(year: number, month: number, day: number) {
   return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+}
+
+/** Month is 1-indexed. Day 0 of the next month is the last day of this one. */
+export function daysInMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 0, 12, 0, 0)).getUTCDate();
 }
 
 /** `"2026-08-07"` -> `"2026-08"`. Also passes a month key through unchanged. */
@@ -50,8 +60,7 @@ export function startOfMonthIso(monthKey: string) {
 export function endOfMonthIso(monthKey: string) {
   const { year, month } = parseMonthKey(monthKey);
 
-  // Day 0 of the next month is the last day of this one.
-  return toIsoDate(new Date(Date.UTC(year, month, 0, 12, 0, 0)));
+  return toIsoDate(utcNoon(year, month, daysInMonth(year, month)));
 }
 
 export function addMonths(monthKey: string, count: number) {

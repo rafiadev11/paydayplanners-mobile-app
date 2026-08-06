@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
@@ -7,7 +7,7 @@ import {
   type CalendarDay,
   type CalendarDayMap,
 } from "@features/calendar/calendar-data";
-import { monthGridDays, monthLabel } from "@shared/lib/month";
+import { monthGridDays, monthKeyOf, monthLabel } from "@shared/lib/month";
 import { theme, withAlpha } from "@shared/ui/theme";
 
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -124,8 +124,8 @@ export function MonthGrid({
   onSelectDate,
   onJumpToToday,
 }: MonthGridProps) {
-  const cells = monthGridDays(monthKey);
-  const showTodayChip = monthKey !== today.slice(0, 7);
+  const cells = useMemo(() => monthGridDays(monthKey), [monthKey]);
+  const showTodayChip = monthKey !== monthKeyOf(today);
 
   return (
     <View style={styles.wrap}>

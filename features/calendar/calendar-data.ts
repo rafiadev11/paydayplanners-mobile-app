@@ -1,3 +1,4 @@
+import { activePaycheckDates } from "@features/money/coverage";
 import {
   type BillOccurrence,
   type ForecastPaycheck,
@@ -32,11 +33,6 @@ export type MonthSummary = {
   savingsTotal: number;
   outTotal: number;
   yoursTotal: number;
-};
-
-export type NextEvent = {
-  kind: "paycheck" | "bill";
-  date: string;
 };
 
 export type CalendarDayMap = Map<string, CalendarDay>;
@@ -168,10 +164,7 @@ export type PaycheckBounds = {
 };
 
 export function paycheckBounds(forecast: ForecastResponse): PaycheckBounds {
-  const dates = forecast.paychecks
-    .filter((paycheck) => paycheck.status !== "skipped")
-    .map((paycheck) => paycheck.occurrence_date)
-    .sort((left, right) => left.localeCompare(right));
+  const dates = activePaycheckDates(forecast.paychecks);
 
   return {
     first: dates[0] ?? null,
@@ -185,38 +178,35 @@ export function hasAnyActivity(forecast: ForecastResponse) {
 }
 
 /**
- * The soonest thing after `fromDate`, so an empty day can name what comes next
- * instead of leaving the user staring at a blank card.
+ * The date of the soonest thing after `fromDate`, so an empty day can name what
+ * comes next instead of leaving the user staring at a blank card.
+ *
+ * `buildDayMap` inserts every paycheck before every bill, so the map is not in
+ * date order and this cannot early-exit.
  */
 export function findNextEventAfter(
   days: CalendarDayMap,
   fromDate: string,
-  kind?: NextEvent["kind"],
-): NextEvent | null {
-  let best: NextEvent | null = null;
+  billsOnly = false,
+): string | null {
+  let best: string | null = null;
 
   for (const day of days.values()) {
-    if (day.date <= fromDate) {
-      continue;
-    }
-
-    if (best && day.date >= best.date) {
-      continue;
-    }
+    if (day.date <= fromDate) continue;
+    if (best && day.date >= best) continue;
 
     const hasBill = day.bills.some((bill) => bill.status !== "skipped");
-    const hasPaycheck = day.paychecks.some(
-      (paycheck) => paycheck.status !== "skipped",
-    );
 
-    if (kind === "bill" && !hasBill) continue;
-    if (kind === "paycheck" && !hasPaycheck) continue;
-    if (!kind && !hasBill && !hasPaycheck) continue;
+    if (billsOnly) {
+      if (!hasBill) continue;
+    } else if (
+      !hasBill &&
+      !day.paychecks.some((paycheck) => paycheck.status !== "skipped")
+    ) {
+      continue;
+    }
 
-    best = {
-      date: day.date,
-      kind: kind ?? (hasPaycheck && !hasBill ? "paycheck" : "bill"),
-    };
+    best = day.date;
   }
 
   return best;

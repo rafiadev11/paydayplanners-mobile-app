@@ -49,12 +49,14 @@ function secondDayLabel(day: number) {
   return day >= 31 ? "Last day" : `${day}th`;
 }
 
+const SECOND_DAY_CLASH_MESSAGE =
+  "Pick a different day from your first pay day.";
+
 type FieldErrors = {
   name?: string;
   amount?: string;
   startDate?: string;
   endDate?: string;
-  secondMonthDay?: string;
 };
 
 export type PayScheduleFormProps = {
@@ -107,6 +109,10 @@ export function PayScheduleForm({
   const [isActive, setIsActive] = useState(schedule?.is_active ?? true);
   const [errors, setErrors] = useState<FieldErrors>({});
 
+  const clearError = (key: keyof FieldErrors) => {
+    setErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
   const normalizedStartDate = isoDateFromInput(startDate);
   const normalizedEndDate = isoDateFromInput(endDate);
   const firstMonthDay = normalizedStartDate
@@ -117,9 +123,11 @@ export function PayScheduleForm({
 
   /** See `bill-form` — the stored month_day / weekday stay authoritative until touched. */
   const scheduleUnchanged =
-    Boolean(schedule) &&
-    frequency === schedule!.frequency &&
+    schedule != null &&
+    frequency === schedule.frequency &&
     normalizedStartDate === seededStartDate;
+  const storedMonthDay = scheduleUnchanged ? schedule.month_day : null;
+  const storedWeekday = scheduleUnchanged ? schedule.weekday : null;
 
   const dates = useMemo(
     () =>
@@ -129,8 +137,8 @@ export function PayScheduleForm({
               frequency,
               startDate: normalizedStartDate,
               endDate: normalizedEndDate,
-              monthDay: scheduleUnchanged ? schedule!.month_day : null,
-              weekday: scheduleUnchanged ? schedule!.weekday : null,
+              monthDay: storedMonthDay,
+              weekday: storedWeekday,
               secondMonthDay,
               // See `bill-form` — show the pay dates still ahead, not old ones.
               notBefore: today,
@@ -142,9 +150,9 @@ export function PayScheduleForm({
       frequency,
       normalizedEndDate,
       normalizedStartDate,
-      schedule,
-      scheduleUnchanged,
       secondMonthDay,
+      storedMonthDay,
+      storedWeekday,
       today,
     ],
   );
@@ -165,44 +173,37 @@ export function PayScheduleForm({
       nextErrors.endDate =
         "The end date must be on or after the first pay date.";
     }
-    if (secondDayClashes) {
-      nextErrors.secondMonthDay =
-        "Pick a different day from your first pay day.";
-    }
-
     setErrors(nextErrors);
 
+    // `secondDayClashes` is derived, so it is already on screen — no need to
+    // mirror it into error state just to decide whether to submit.
     if (Object.keys(nextErrors).length > 0 || !normalizedAmount) return;
+    if (secondDayClashes) return;
 
     const payload: PayScheduleInput = {
       name: name.trim(),
       amount: normalizedAmount,
       frequency,
-      start_date: scheduleUnchanged
-        ? schedule!.start_date
-        : normalizedStartDate!,
+      start_date:
+        scheduleUnchanged && schedule
+          ? schedule.start_date
+          : normalizedStartDate!,
       end_date: normalizedEndDate,
       is_active: isActive,
     };
 
-    const storedMonthDay = scheduleUnchanged ? schedule!.month_day : null;
-
     if (frequency === "weekly" || frequency === "biweekly") {
       payload.weekday =
-        (scheduleUnchanged ? schedule!.weekday : null) ??
-        weekdayFromIsoDate(normalizedStartDate!);
+        storedWeekday ?? weekdayFromIsoDate(normalizedStartDate!);
       payload.interval_value = frequency === "weekly" ? 1 : 2;
     }
 
     // Derived from the first pay date, so nothing can contradict it.
-    if (frequency === "monthly") {
-      payload.month_day =
-        storedMonthDay ?? Number(normalizedStartDate!.slice(8, 10));
+    if (frequency === "monthly" || frequency === "semimonthly") {
+      payload.month_day = storedMonthDay ?? firstMonthDay;
     }
 
     if (frequency === "semimonthly") {
-      payload.month_day =
-        storedMonthDay ?? Number(normalizedStartDate!.slice(8, 10));
       payload.interval_value = secondMonthDay;
     }
 
@@ -217,7 +218,7 @@ export function PayScheduleForm({
         label="Name"
         onChangeText={(value) => {
           setName(value);
-          setErrors((current) => ({ ...current, name: undefined }));
+          clearError("name");
         }}
         placeholder="Main paycheck"
         value={name}
@@ -229,7 +230,7 @@ export function PayScheduleForm({
         label="Amount"
         onChangeText={(value) => {
           setAmount(value);
-          setErrors((current) => ({ ...current, amount: undefined }));
+          clearError("amount");
         }}
         placeholder="$2,400.00"
         value={amount}
@@ -256,7 +257,7 @@ export function PayScheduleForm({
         label={frequency === "once" ? "Pay date" : "First pay date"}
         onChange={(value) => {
           setStartDate(value);
-          setErrors((current) => ({ ...current, startDate: undefined }));
+          clearError("startDate");
         }}
         value={startDate}
       />
@@ -271,20 +272,13 @@ export function PayScheduleForm({
                 label={secondDayLabel(day)}
                 onPress={() => {
                   setSecondMonthDay(day);
-                  setErrors((current) => ({
-                    ...current,
-                    secondMonthDay: undefined,
-                  }));
                 }}
                 selected={secondMonthDay === day}
               />
             ))}
           </View>
-          {errors.secondMonthDay || secondDayClashes ? (
-            <Text style={styles.errorText}>
-              {errors.secondMonthDay ??
-                "Pick a different day from your first pay day."}
-            </Text>
+          {secondDayClashes ? (
+            <Text style={styles.errorText}>{SECOND_DAY_CLASH_MESSAGE}</Text>
           ) : (
             <Text style={styles.hintText}>
               Your first pay date sets the other day of the month.
@@ -323,7 +317,7 @@ export function PayScheduleForm({
           minimumDate={startDate}
           onChange={(value) => {
             setEndDate(value);
-            setErrors((current) => ({ ...current, endDate: undefined }));
+            clearError("endDate");
           }}
           value={endDate}
         />

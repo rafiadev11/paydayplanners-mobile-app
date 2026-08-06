@@ -7,10 +7,12 @@
  * the day-clamping rule (`monthlyOccurrenceForMonth`) and the semimonthly
  * two-days-per-month sweep are copied deliberately, not approximated.
  *
- * All arithmetic runs at noon UTC, the same convention as `@shared/lib/month`,
- * because parsing a bare `YYYY-MM-DD` in local time drifts a day across DST and
- * in negative-offset zones.
+ * All arithmetic runs at noon UTC — the primitives come from `@shared/lib/month`
+ * rather than being restated here, because parsing a bare `YYYY-MM-DD` in local
+ * time drifts a day across DST and in negative-offset zones.
  */
+
+import { daysInMonth, toIsoDate as toIso, utcNoon } from "@shared/lib/month";
 
 export type RecurrenceFrequency =
   | "once"
@@ -45,6 +47,9 @@ export type RecurrenceRule = {
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
+/** One ceiling for every loop below; none is reachable with real schedules. */
+const MAX_STEPS = 5000;
+
 type DateParts = {
   year: number;
   month: number;
@@ -61,22 +66,6 @@ function parseIso(value: string): DateParts | null {
     month: Number(match[2]),
     day: Number(match[3]),
   };
-}
-
-function utcNoon(year: number, month: number, day: number) {
-  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-}
-
-function toIso(date: Date) {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function daysInMonth(year: number, month: number) {
-  return new Date(Date.UTC(year, month, 0, 12, 0, 0)).getUTCDate();
 }
 
 /** `monthlyOccurrenceForMonth` — the 31st becomes the 30th or the 28th. */
@@ -116,15 +105,15 @@ export function nextOccurrences(rule: RecurrenceRule, count = 3): string[] {
   if (!start || count < 1) return [];
 
   const startIso = rule.startDate.trim();
-  const endIso = rule.endDate ? parseIso(rule.endDate) : null;
-  const endLimit = endIso ? rule.endDate!.trim() : null;
+  const endLimit =
+    rule.endDate && parseIso(rule.endDate) ? rule.endDate.trim() : null;
+  const notBefore =
+    rule.notBefore && parseIso(rule.notBefore) ? rule.notBefore.trim() : null;
 
   const withinEnd = (iso: string) => endLimit === null || iso <= endLimit;
-  const floor =
-    rule.notBefore && parseIso(rule.notBefore)
-      ? rule.notBefore.trim()
-      : startIso;
-  const started = (iso: string) => iso >= startIso && iso >= floor;
+  // A single lower bound: the later of the series start and the caller's floor.
+  const floor = notBefore && notBefore > startIso ? notBefore : startIso;
+  const started = (iso: string) => iso >= floor;
 
   if (rule.frequency === "once") {
     return withinEnd(startIso) && started(startIso) ? [startIso] : [];
@@ -143,7 +132,7 @@ export function nextOccurrences(rule: RecurrenceRule, count = 3): string[] {
 
     let guard = 0;
 
-    while (dates.length < count && guard < 5000) {
+    while (dates.length < count && guard < MAX_STEPS) {
       guard += 1;
 
       const iso = toIso(cursor);
@@ -163,7 +152,7 @@ export function nextOccurrences(rule: RecurrenceRule, count = 3): string[] {
     let year = start.year;
     let guard = 0;
 
-    while (dates.length < count && guard < 200) {
+    while (dates.length < count && guard < MAX_STEPS) {
       guard += 1;
 
       const iso = toIso(occurrenceInMonth(year, start.month, start.day));
@@ -192,7 +181,7 @@ export function nextOccurrences(rule: RecurrenceRule, count = 3): string[] {
   // A monthly rule whose target day precedes the start date begins next month.
   let guard = 0;
 
-  while (dates.length < count && guard < 1200) {
+  while (dates.length < count && guard < MAX_STEPS) {
     guard += 1;
 
     for (const targetDay of targetDays) {

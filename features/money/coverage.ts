@@ -12,14 +12,19 @@ export type Coverage =
   | { kind: "before-first"; firstPaycheckDate: string }
   | { kind: "no-income" };
 
+/** Dates income actually lands on, ascending. Skipped paychecks pay nothing. */
+export function activePaycheckDates(paychecks: PaycheckOccurrence[]) {
+  return paychecks
+    .filter((paycheck) => paycheck.status !== "skipped")
+    .map((paycheck) => paycheck.occurrence_date)
+    .sort((left, right) => left.localeCompare(right));
+}
+
 export function coverageForDueDate(
   dueDate: string,
   paychecks: PaycheckOccurrence[],
 ): Coverage {
-  const dates = paychecks
-    .filter((paycheck) => paycheck.status !== "skipped")
-    .map((paycheck) => paycheck.occurrence_date)
-    .sort((left, right) => left.localeCompare(right));
+  const dates = activePaycheckDates(paychecks);
 
   if (dates.length === 0) {
     return { kind: "no-income" };

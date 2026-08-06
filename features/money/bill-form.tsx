@@ -21,6 +21,7 @@ import { usePlanningRevision } from "@shared/api/planning-revision";
 import {
   formatDate,
   isoDateFromInput,
+  monthDayFromIsoDate,
   parseCurrencyInput,
   weekdayFromIsoDate,
 } from "@shared/lib/format";
@@ -112,6 +113,10 @@ export function BillForm({
   const [isActive, setIsActive] = useState(bill?.is_active ?? true);
   const [errors, setErrors] = useState<FieldErrors>({});
 
+  const clearError = (key: keyof FieldErrors) => {
+    setErrors((current) => ({ ...current, [key]: undefined }));
+  };
+
   const normalizedStartDate = isoDateFromInput(startDate);
   const normalizedEndDate = isoDateFromInput(endDate);
 
@@ -121,9 +126,11 @@ export function BillForm({
    * displayed date would round a clamped day and move the bill.
    */
   const scheduleUnchanged =
-    Boolean(bill) &&
-    frequency === bill!.frequency &&
+    bill != null &&
+    frequency === bill.frequency &&
     normalizedStartDate === seededStartDate;
+  const storedDueDay = scheduleUnchanged ? bill.due_day : null;
+  const storedWeekday = scheduleUnchanged ? bill.weekday : null;
 
   const dates = useMemo(
     () =>
@@ -133,8 +140,8 @@ export function BillForm({
               frequency,
               startDate: normalizedStartDate,
               endDate: normalizedEndDate,
-              monthDay: scheduleUnchanged ? bill!.due_day : null,
-              weekday: scheduleUnchanged ? bill!.weekday : null,
+              monthDay: storedDueDay,
+              weekday: storedWeekday,
               // An existing bill's series may have begun long ago; show what is
               // still ahead, since that is what coverage is judged against.
               notBefore: today,
@@ -143,11 +150,11 @@ export function BillForm({
           )
         : [],
     [
-      bill,
       frequency,
       normalizedEndDate,
       normalizedStartDate,
-      scheduleUnchanged,
+      storedDueDay,
+      storedWeekday,
       today,
     ],
   );
@@ -184,7 +191,8 @@ export function BillForm({
       name: name.trim(),
       amount: normalizedAmount,
       frequency,
-      start_date: scheduleUnchanged ? bill!.start_date : normalizedStartDate!,
+      start_date:
+        scheduleUnchanged && bill ? bill.start_date : normalizedStartDate!,
       end_date: normalizedEndDate,
       bill_category_id: categoryId ? Number(categoryId) : null,
       // No longer offered in the UI; carried through so saving never flips it.
@@ -194,18 +202,15 @@ export function BillForm({
     };
 
     if (frequency === "weekly" || frequency === "biweekly") {
-      payload.weekday = scheduleUnchanged
-        ? (bill!.weekday ?? weekdayFromIsoDate(normalizedStartDate!))
-        : weekdayFromIsoDate(normalizedStartDate!);
+      payload.weekday =
+        storedWeekday ?? weekdayFromIsoDate(normalizedStartDate!);
       payload.interval_value = frequency === "weekly" ? 1 : 2;
     }
 
     // Derived from the first due date, so the two can never contradict.
     if (frequency === "monthly") {
       payload.due_day =
-        scheduleUnchanged && bill!.due_day
-          ? bill!.due_day
-          : Number(normalizedStartDate!.slice(8, 10));
+        storedDueDay ?? monthDayFromIsoDate(normalizedStartDate!);
     }
 
     onSubmit(payload);
@@ -219,7 +224,7 @@ export function BillForm({
         label="Name"
         onChangeText={(value) => {
           setName(value);
-          setErrors((current) => ({ ...current, name: undefined }));
+          clearError("name");
         }}
         placeholder="Rent"
         value={name}
@@ -230,7 +235,7 @@ export function BillForm({
         label="Amount"
         onChangeText={(value) => {
           setAmount(value);
-          setErrors((current) => ({ ...current, amount: undefined }));
+          clearError("amount");
         }}
         placeholder="$1,200.00"
         value={amount}
@@ -257,7 +262,7 @@ export function BillForm({
         label={frequency === "once" ? "Due date" : "First due date"}
         onChange={(value) => {
           setStartDate(value);
-          setErrors((current) => ({ ...current, startDate: undefined }));
+          clearError("startDate");
         }}
         value={startDate}
       />
@@ -300,7 +305,7 @@ export function BillForm({
           minimumDate={startDate}
           onChange={(value) => {
             setEndDate(value);
-            setErrors((current) => ({ ...current, endDate: undefined }));
+            clearError("endDate");
           }}
           value={endDate}
         />
