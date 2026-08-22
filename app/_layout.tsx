@@ -117,6 +117,13 @@ function RootNavigator() {
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
           <Stack.Screen
+            name="onboarding"
+            options={{
+              gestureEnabled: false,
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
             name="forgot-password"
             options={{
               title: "Forgot password",

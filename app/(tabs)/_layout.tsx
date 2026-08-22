@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Redirect, Tabs } from "expo-router";
+import { Redirect, Tabs, type Href } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { useAuth } from "@features/auth/auth-context";
+import { shouldEnterGuidedOnboarding } from "@features/onboarding/routing";
 import { useBiometricLock } from "@features/security/biometric-lock-context";
 import { theme, withAlpha } from "@shared/ui/theme";
 
@@ -29,6 +30,9 @@ export default function TabsLayout() {
   }
 
   if (!user) return <Redirect href="/login" />;
+  if (shouldEnterGuidedOnboarding(user)) {
+    return <Redirect href={"/onboarding" as Href} />;
+  }
   if (biometricLock.enabled && biometricLock.locked) {
     return (
       <View

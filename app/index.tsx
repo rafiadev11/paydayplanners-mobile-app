@@ -2,6 +2,7 @@ import { Redirect } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { useAuth } from "@features/auth/auth-context";
+import { authenticatedEntryRoute } from "@features/onboarding/routing";
 import { theme } from "@shared/ui/theme";
 
 export default function IndexScreen() {
@@ -16,7 +17,7 @@ export default function IndexScreen() {
   }
 
   if (!user) return <Redirect href="/login" />;
-  return <Redirect href="/dashboard" />;
+  return <Redirect href={authenticatedEntryRoute(user)} />;
 }
 
 const styles = StyleSheet.create({
