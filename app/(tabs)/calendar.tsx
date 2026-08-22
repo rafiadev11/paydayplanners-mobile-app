@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
 
 import { useAuth } from "@features/auth/auth-context";
@@ -41,15 +41,25 @@ const HISTORY_LIMIT_MONTHS = 12;
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const { date: routedDate } = useLocalSearchParams<{ date?: string }>();
   const { user } = useAuth();
   const planningRevision = usePlanningRevision();
   const scope = { revision: planningRevision, userId: user?.id };
 
   const today = todayInAppTimezone();
   const currentMonth = monthKeyOf(today);
+  const initialDate =
+    routedDate && /^\d{4}-\d{2}-\d{2}$/.test(routedDate) ? routedDate : today;
 
-  const [visibleMonth, setVisibleMonth] = useState(currentMonth);
-  const [selectedDate, setSelectedDate] = useState(today);
+  const [visibleMonth, setVisibleMonth] = useState(monthKeyOf(initialDate));
+  const [selectedDate, setSelectedDate] = useState(initialDate);
+
+  useEffect(() => {
+    if (!routedDate || !/^\d{4}-\d{2}-\d{2}$/.test(routedDate)) return;
+
+    setVisibleMonth(monthKeyOf(routedDate));
+    setSelectedDate(routedDate);
+  }, [routedDate]);
 
   /**
    * The window starts at the earliest month being looked at — never later than

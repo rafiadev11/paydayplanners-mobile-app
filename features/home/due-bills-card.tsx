@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { type Href, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -8,6 +9,7 @@ import {
   type BillOccurrenceStatus,
   type DashboardResponse,
 } from "@features/planning/api";
+import { useAuth } from "@features/auth/auth-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   formatCurrency,
@@ -124,10 +126,12 @@ function BillRow({
   row,
   pending,
   onToggle,
+  onOpen,
 }: {
   row: DueBillRow;
   pending: boolean;
   onToggle: (row: DueBillRow) => void;
+  onOpen?: (row: DueBillRow) => void;
 }) {
   const paid = row.status === "paid";
   const short = !paid && row.unfunded > 0;
@@ -141,20 +145,38 @@ function BillRow({
 
   return (
     <SurfaceCard style={[styles.row, paid ? styles.rowPaid : null]}>
-      <DateChip
-        dueDate={row.dueDate}
-        tone={paid ? "paid" : short ? "short" : "neutral"}
-      />
-      <View style={styles.rowCopy}>
-        <Text style={[styles.rowTitle, paid ? styles.rowTitlePaid : null]}>
-          {row.name}
-        </Text>
-        <Text
-          style={[styles.rowSubtitle, short ? styles.rowSubtitleShort : null]}
-        >
-          {subtitle}
-        </Text>
-      </View>
+      <Pressable
+        accessibilityHint={
+          onOpen
+            ? "Opens this payment without changing future payments."
+            : undefined
+        }
+        accessibilityLabel={onOpen ? `Adjust ${row.name} payment` : undefined}
+        accessibilityRole={onOpen ? "button" : undefined}
+        disabled={!onOpen}
+        onPress={() => {
+          onOpen?.(row);
+        }}
+        style={({ pressed }) => [
+          styles.rowOpen,
+          pressed && onOpen ? styles.rowOpenPressed : null,
+        ]}
+      >
+        <DateChip
+          dueDate={row.dueDate}
+          tone={paid ? "paid" : short ? "short" : "neutral"}
+        />
+        <View style={styles.rowCopy}>
+          <Text style={[styles.rowTitle, paid ? styles.rowTitlePaid : null]}>
+            {row.name}
+          </Text>
+          <Text
+            style={[styles.rowSubtitle, short ? styles.rowSubtitleShort : null]}
+          >
+            {subtitle}
+          </Text>
+        </View>
+      </Pressable>
       <View style={styles.rowActions}>
         <Text style={[styles.rowAmount, paid ? styles.rowAmountPaid : null]}>
           {formatCurrency(row.amount)}
@@ -173,6 +195,11 @@ function BillRow({
 }
 
 export function DueBillsCard({ dashboard }: { dashboard: DashboardResponse }) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const adjustmentsEnabled = Boolean(
+    user?.features?.bill_occurrence_adjustments,
+  );
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [optimistic, setOptimistic] = useState<
     Record<string, BillOccurrenceStatus>
@@ -257,6 +284,15 @@ export function DueBillsCard({ dashboard }: { dashboard: DashboardResponse }) {
           onToggle={(target) => {
             void toggle(target);
           }}
+          onOpen={
+            adjustmentsEnabled
+              ? (target) => {
+                  router.push(
+                    `/bill-occurrences/${target.id}?returnTo=dashboard` as Href,
+                  );
+                }
+              : undefined
+          }
           pending={pendingIds.has(row.id)}
           row={row}
         />
@@ -314,6 +350,15 @@ const styles = StyleSheet.create({
   },
   rowPaid: {
     opacity: 0.7,
+  },
+  rowOpen: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+  },
+  rowOpenPressed: {
+    opacity: 0.72,
   },
   chip: {
     width: 58,

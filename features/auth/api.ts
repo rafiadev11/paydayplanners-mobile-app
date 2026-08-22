@@ -16,6 +16,9 @@ export type User = {
     status: "pending" | "completed" | "skipped" | "legacy";
     finished_at?: string | null;
   };
+  features?: {
+    bill_occurrence_adjustments?: boolean;
+  };
 };
 
 type ResourceEnvelope<T> = {

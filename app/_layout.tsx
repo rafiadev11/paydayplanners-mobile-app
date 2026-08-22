@@ -192,6 +192,13 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="bill-occurrences/[id]"
+            options={{
+              title: "Adjust Payment",
+              ...modalOptions,
+            }}
+          />
+          <Stack.Screen
             name="savings-goals/new"
             options={{
               title: "New Savings Goal",

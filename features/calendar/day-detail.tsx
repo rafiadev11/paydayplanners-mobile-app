@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import {
   useCallback,
   useEffect,
@@ -19,6 +19,7 @@ import {
   type CalendarDayMap,
   type PaycheckBounds,
 } from "@features/calendar/calendar-data";
+import { useAuth } from "@features/auth/auth-context";
 import {
   updateBillOccurrenceStatus,
   type BillOccurrence,
@@ -255,6 +256,10 @@ export function DayDetail({
   onChanged,
 }: DayDetailProps) {
   const router = useRouter();
+  const { user } = useAuth();
+  const adjustmentsEnabled = Boolean(
+    user?.features?.bill_occurrence_adjustments,
+  );
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [optimistic, setOptimistic] = useState<
     Record<string, BillOccurrenceStatus>
@@ -397,11 +402,17 @@ export function DayDetail({
             amountTone={paid || bill.status === "skipped" ? "muted" : "ink"}
             key={`bill-${id}`}
             onPress={
-              bill.bill_id
+              adjustmentsEnabled
                 ? () => {
-                    router.push(`/bills/${bill.bill_id}`);
+                    router.push(
+                      `/bill-occurrences/${id}?returnTo=calendar` as Href,
+                    );
                   }
-                : undefined
+                : bill.bill_id
+                  ? () => {
+                      router.push(`/bills/${bill.bill_id}`);
+                    }
+                  : undefined
             }
             strikeAmount={paid || bill.status === "skipped"}
             subtitle={subtitle.text}
