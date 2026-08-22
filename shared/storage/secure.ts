@@ -7,6 +7,7 @@ const NOTIFICATION_PREFS_KEY = "paydayplanners.notification_prefs";
 const BILL_REMINDER_SCHEDULES_KEY = "paydayplanners.bill_reminder_schedules";
 const APP_UPDATE_DISMISSAL_KEY = "paydayplanners.app_update_dismissal";
 const HOME_INTRO_SEEN_KEY = "paydayplanners.home_intro_seen";
+const ONBOARDING_DRAFTS_KEY = "paydayplanners.onboarding_drafts";
 
 export const tokenStorage = {
   get: () => SecureStore.getItemAsync(TOKEN_KEY),
@@ -51,4 +52,11 @@ export const homeIntroSeenStorage = {
   get: () => SecureStore.getItemAsync(HOME_INTRO_SEEN_KEY),
   set: (value: string) => SecureStore.setItemAsync(HOME_INTRO_SEEN_KEY, value),
   clear: () => SecureStore.deleteItemAsync(HOME_INTRO_SEEN_KEY),
+};
+
+export const onboardingDraftsStorage = {
+  get: () => SecureStore.getItemAsync(ONBOARDING_DRAFTS_KEY),
+  set: (value: string) =>
+    SecureStore.setItemAsync(ONBOARDING_DRAFTS_KEY, value),
+  clear: () => SecureStore.deleteItemAsync(ONBOARDING_DRAFTS_KEY),
 };

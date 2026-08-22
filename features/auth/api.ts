@@ -10,6 +10,12 @@ export type User = {
   email_verified_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  onboarding?: {
+    enabled: boolean;
+    version: number | string;
+    status: "pending" | "completed" | "skipped" | "legacy";
+    finished_at?: string | null;
+  };
 };
 
 type ResourceEnvelope<T> = {

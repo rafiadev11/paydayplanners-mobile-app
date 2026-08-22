@@ -16,6 +16,7 @@ import {
   type RegisterInput,
   type User,
 } from "@features/auth/api";
+import { shouldEnterGuidedOnboarding } from "@features/onboarding/routing";
 import { setAuthToken } from "@shared/api/client";
 import { setPlanningRevision } from "@shared/api/planning-revision";
 import { setAppTimezone } from "@shared/lib/timezone";
@@ -28,7 +29,10 @@ type AuthContextValue = {
   signUp: (input: RegisterInput) => Promise<User>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<User | null>;
-  syncUser: (user: User | null) => Promise<void>;
+  syncUser: (
+    user: User | null,
+    options?: { prefetchPlanning?: boolean },
+  ) => Promise<void>;
   clearSession: () => Promise<void>;
 };
 
@@ -61,19 +65,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
-  const syncUser = async (nextUser: User | null) => {
+  const syncUser = async (
+    nextUser: User | null,
+    options: { prefetchPlanning?: boolean } = {},
+  ) => {
     setUser(nextUser);
     setAppTimezone(nextUser?.timezone ?? null);
     setPlanningRevision(nextUser?.planning_revision);
     await persistUser(nextUser);
 
-    if (nextUser?.id) {
+    if (!nextUser?.id || shouldEnterGuidedOnboarding(nextUser)) {
+      queryClient.clear();
+      return;
+    }
+
+    if (options.prefetchPlanning !== false) {
       void prefetchPlanningQueries(queryClient, {
         revision: Number(nextUser.planning_revision ?? 0),
         userId: nextUser.id,
       });
-    } else {
-      queryClient.clear();
     }
   };
 
@@ -104,10 +114,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAppTimezone(nextUser?.timezone);
         setPlanningRevision(nextUser?.planning_revision);
         await persistUser(nextUser);
-        void prefetchPlanningQueries(queryClient, {
-          revision: Number(nextUser.planning_revision ?? 0),
-          userId: nextUser.id,
-        });
+        if (!shouldEnterGuidedOnboarding(nextUser)) {
+          void prefetchPlanningQueries(queryClient, {
+            revision: Number(nextUser.planning_revision ?? 0),
+            userId: nextUser.id,
+          });
+        }
       } catch {
         if (!active) return;
         setUser(null);

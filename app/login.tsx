@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@features/auth/auth-context";
+import { authenticatedEntryRoute } from "@features/onboarding/routing";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import { Field, PrimaryButton, SurfaceCard } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
@@ -28,7 +29,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (user) return <Redirect href="/dashboard" />;
+  if (user) return <Redirect href={authenticatedEntryRoute(user)} />;
 
   const submit = async () => {
     setLoading(true);

@@ -218,8 +218,8 @@ export default function DashboardScreen() {
                       Add a savings goal
                     </Text>
                     <Text style={styles.goalCalloutBody}>
-                      Savings goals keep users returning because they turn the
-                      paycheck plan into visible progress toward something real.
+                      Set aside part of each paycheck and watch your progress
+                      toward something that matters to you.
                     </Text>
                   </View>
                 </View>
