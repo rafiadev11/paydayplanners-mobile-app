@@ -72,6 +72,8 @@ export type BillOccurrence = {
   id: number | string;
   bill_id?: number | string;
   due_date: string;
+  scheduled_due_date?: string;
+  adjusted_due_date?: string | null;
   amount: string;
   actual_amount?: string | null;
   effective_amount?: string;
@@ -81,6 +83,7 @@ export type BillOccurrence = {
   assigned_paycheck_occurrence_id?: number | string | null;
   assigned_paycheck_occurrence?: PaycheckOccurrence | null;
   is_assignment_manual?: boolean;
+  is_adjusted?: boolean;
   status: string;
   bill?: Bill | null;
   allocations?: {
@@ -89,6 +92,44 @@ export type BillOccurrence = {
     paycheck_occurrence_id: number | string;
     paycheck_occurrence?: PaycheckOccurrence | null;
   }[];
+};
+
+export type BillOccurrenceAdjustmentInput = {
+  amount: string;
+  due_date: string;
+  status?: BillOccurrenceStatus;
+  expected_planning_revision: number;
+};
+
+export type BillOccurrenceAdjustmentImpact = {
+  id: number | string;
+  occurrence_date: string;
+  name?: string | null;
+  before_remaining: string;
+  after_remaining: string;
+  change_amount: string;
+};
+
+export type BillOccurrenceAdjustmentPreview = {
+  proposed: {
+    amount: string;
+    due_date: string;
+    status: BillOccurrenceStatus;
+    is_adjusted: boolean;
+    unfunded_amount: string;
+  };
+  before_paycheck?: {
+    id: number | string;
+    occurrence_date: string;
+    name?: string | null;
+  } | null;
+  after_paycheck?: {
+    id: number | string;
+    occurrence_date: string;
+    name?: string | null;
+  } | null;
+  impacts: BillOccurrenceAdjustmentImpact[];
+  planning_revision: number;
 };
 
 export type SavingsGoal = {
@@ -347,6 +388,14 @@ export async function fetchBillOccurrences(days = 365) {
   return collection(data);
 }
 
+export async function fetchBillOccurrence(id: number | string) {
+  const { data } = await api.get<ItemEnvelope<BillOccurrence>>(
+    `/api/v1/bill-occurrences/${id}`,
+  );
+
+  return item(data);
+}
+
 export async function createPaySchedule(input: PayScheduleInput) {
   const { data } = await api.post<ItemEnvelope<PaySchedule>>(
     "/api/v1/pay-schedules",
@@ -402,6 +451,30 @@ export async function updateBillOccurrenceStatus(
   const { data } = await api.patch<
     ItemEnvelope<BillOccurrence> | BillOccurrence
   >(`/api/v1/bill-occurrences/${id}`, { status });
+
+  return item(data);
+}
+
+export async function previewBillOccurrenceAdjustment(
+  id: number | string,
+  input: BillOccurrenceAdjustmentInput,
+  signal?: AbortSignal,
+) {
+  const { data } = await api.post<
+    ItemEnvelope<BillOccurrenceAdjustmentPreview>
+  >(`/api/v1/bill-occurrences/${id}/preview`, input, { signal });
+
+  return item(data);
+}
+
+export async function updateBillOccurrence(
+  id: number | string,
+  input: BillOccurrenceAdjustmentInput,
+) {
+  const { data } = await api.patch<ItemEnvelope<BillOccurrence>>(
+    `/api/v1/bill-occurrences/${id}`,
+    input,
+  );
 
   return item(data);
 }
