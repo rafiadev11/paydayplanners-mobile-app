@@ -40,7 +40,7 @@ import {
 } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
-type RailTone = "income" | "bill" | "danger" | "success" | "quiet";
+type RailTone = "income" | "bill" | "planned" | "danger" | "success" | "quiet";
 
 type DayDetailProps = {
   date: string;
@@ -54,6 +54,7 @@ type DayDetailProps = {
 const railColors: Record<RailTone, string> = {
   income: theme.colors.primary,
   bill: theme.colors.accent,
+  planned: theme.colors.primaryStrong,
   danger: theme.colors.danger,
   success: theme.colors.success,
   quiet: theme.colors.borderStrong,
@@ -185,7 +186,10 @@ function paycheckDetail(paycheck: ForecastPaycheck) {
  */
 function billSubtitle(bill: BillOccurrence, bounds: PaycheckBounds) {
   if (bill.status === "paid") {
-    return { text: "Paid", tone: "muted" as const };
+    return {
+      text: bill.bill?.kind === "planned_expense" ? "Purchased" : "Paid",
+      tone: "muted" as const,
+    };
   }
 
   if (bill.status === "skipped") {
@@ -230,11 +234,13 @@ function billSubtitle(bill: BillOccurrence, bounds: PaycheckBounds) {
   }
 
   const coveredBy = bill.assigned_paycheck_occurrence?.occurrence_date;
+  const prefix =
+    bill.bill?.kind === "planned_expense" ? "Planned purchase · " : "";
 
   return {
     text: coveredBy
-      ? `Covered by ${formatWeekdayDate(coveredBy)} paycheck`
-      : "Not covered by a paycheck yet",
+      ? `${prefix}Covered by ${formatWeekdayDate(coveredBy)} paycheck`
+      : `${prefix}Not covered by a paycheck yet`,
     tone: "muted" as const,
   };
 }
@@ -243,6 +249,8 @@ function billRailTone(bill: BillOccurrence): RailTone {
   if (bill.status === "paid") return "success";
   if (bill.status === "skipped") return "quiet";
   if (isBillShort(bill)) return "danger";
+
+  if (bill.bill?.kind === "planned_expense") return "planned";
 
   return "bill";
 }

@@ -29,6 +29,7 @@ type DueBillRow = {
   status: string;
   unfunded: number;
   coveredBy: string | null;
+  isPlannedPurchase: boolean;
 };
 
 function toRow(
@@ -46,6 +47,7 @@ function toRow(
     amount: occurrence.effective_amount ?? occurrence.amount,
     status: occurrence.status,
     unfunded,
+    isPlannedPurchase: occurrence.bill?.kind === "planned_expense",
     coveredBy:
       unfunded > 0
         ? null
@@ -136,11 +138,13 @@ function BillRow({
   const paid = row.status === "paid";
   const short = !paid && row.unfunded > 0;
   const subtitle = paid
-    ? "Paid"
+    ? row.isPlannedPurchase
+      ? "Purchased"
+      : "Paid"
     : short
       ? `Short ${formatCurrency(row.unfunded)} — no paycheck covers this yet`
       : row.coveredBy
-        ? `Covered by ${row.coveredBy} paycheck`
+        ? `${row.isPlannedPurchase ? "Planned purchase · " : ""}Covered by ${row.coveredBy} paycheck`
         : "Not covered by a paycheck yet";
 
   return (
@@ -183,7 +187,15 @@ function BillRow({
         </Text>
         <SecondaryButton
           disabled={pending}
-          label={pending ? "Saving…" : paid ? "Undo" : "Mark paid"}
+          label={
+            pending
+              ? "Saving…"
+              : paid
+                ? "Undo"
+                : row.isPlannedPurchase
+                  ? "Mark purchased"
+                  : "Mark paid"
+          }
           onPress={() => {
             onToggle(row);
           }}
@@ -272,7 +284,7 @@ export function DueBillsCard({ dashboard }: { dashboard: DashboardResponse }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={styles.title}>This paycheck&apos;s bills</Text>
+        <Text style={styles.title}>This paycheck&apos;s plan</Text>
         <Text style={styles.counter}>
           {`${rows.length - paidCount} left · ${paidCount} paid`}
         </Text>

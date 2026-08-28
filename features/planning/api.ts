@@ -26,6 +26,7 @@ export type BillCategory = {
 export type Bill = {
   id: number | string;
   bill_category_id?: number | string | null;
+  kind?: "bill" | "planned_expense";
   name: string;
   amount: string;
   frequency: string;
@@ -170,6 +171,7 @@ export type PayScheduleInput = {
 export type BillInput = {
   name: string;
   bill_category_id?: number | string | null;
+  kind?: "bill" | "planned_expense";
   amount: string;
   frequency: "weekly" | "biweekly" | "monthly" | "yearly" | "once";
   due_day?: number | null;
@@ -276,6 +278,74 @@ export type ForecastResponse = {
   insights: DashboardResponse["insights"];
 };
 
+export type PurchasePlanVerdict =
+  | "fits_comfortably"
+  | "fits_tight"
+  | "save_across_paychecks"
+  | "choose_later_date"
+  | "plan_needs_attention"
+  | "add_income_first";
+
+export type PurchasePlanPaycheckImpact = {
+  id: number | string;
+  occurrence_date: string;
+  name?: string | null;
+  before_remaining: string;
+  after_remaining: string;
+  above_cushion: boolean;
+};
+
+export type PurchasePlanContribution = PurchasePlanPaycheckImpact & {
+  contribution_amount: string;
+};
+
+export type PurchasePlanInput = {
+  name: string;
+  amount: string;
+  target_date: string;
+  minimum_cushion: string;
+  expected_planning_revision: number;
+};
+
+export type PurchasePlanPreview = {
+  purchase: {
+    name: string;
+    amount: string;
+    target_date: string;
+  };
+  verdict: PurchasePlanVerdict;
+  minimum_cushion: string;
+  direct_impact:
+    | (PurchasePlanPaycheckImpact & {
+        purchase_amount: string;
+        non_negative: boolean;
+      })
+    | null;
+  saving_plan: {
+    feasible_by_target: boolean;
+    target_date: string;
+    planned_total: string;
+    shortfall: string;
+    earliest_ready_date?: string | null;
+    contributions: PurchasePlanContribution[];
+    later_contributions: PurchasePlanContribution[];
+  };
+  baseline_warnings: {
+    kind: "short_paycheck" | "uncovered_bill";
+    date: string;
+    name?: string | null;
+    amount: string;
+  }[];
+  can_commit_planned_expense: boolean;
+  can_commit_savings_goal: boolean;
+  planning_revision: number;
+};
+
+export type PurchasePlanCommit = {
+  commit_as: "planned_expense" | "savings_goal";
+  resource: Bill | SavingsGoal;
+};
+
 function collection<T>(payload: CollectionEnvelope<T>) {
   return payload.data;
 }
@@ -300,6 +370,33 @@ function buildWindow(days = 365) {
 export async function fetchDashboard() {
   const { data } = await api.get<DashboardResponse>("/api/v1/dashboard");
   return data;
+}
+
+export async function previewPurchasePlan(
+  input: PurchasePlanInput,
+  signal?: AbortSignal,
+) {
+  const { data } = await api.post<ItemEnvelope<PurchasePlanPreview>>(
+    "/api/v1/purchase-plans/preview",
+    input,
+    { signal },
+  );
+
+  return item(data);
+}
+
+export async function commitPurchasePlan(
+  input: PurchasePlanInput & {
+    commit_as: PurchasePlanCommit["commit_as"];
+    request_id: string;
+  },
+) {
+  const { data } = await api.post<ItemEnvelope<PurchasePlanCommit>>(
+    "/api/v1/purchase-plans/commit",
+    input,
+  );
+
+  return item(data);
 }
 
 export type ForecastWindow = {

@@ -11,7 +11,7 @@ import { useBillsQuery } from "@features/planning/queries";
 import { usePlanningRevision } from "@shared/api/planning-revision";
 import { useRefetchStaleOnFocus } from "@shared/api/use-refetch-stale-on-focus";
 import { getApiErrorMessage } from "@shared/lib/api-error";
-import { formatCurrency, formatInteger } from "@shared/lib/format";
+import { formatCurrency, formatDate, formatInteger } from "@shared/lib/format";
 import { ActionSheet, type ActionSheetOption } from "@shared/ui/action-sheet";
 import {
   EmptyState,
@@ -69,18 +69,32 @@ export function BillsSegment() {
   useRefetchStaleOnFocus(billsQuery);
 
   const bills = useMemo(() => billsQuery.data ?? [], [billsQuery.data]);
-  const rows = useMemo(() => sortBills(bills, sort), [bills, sort]);
+  const regularBills = useMemo(
+    () => bills.filter((bill) => bill.kind !== "planned_expense"),
+    [bills],
+  );
+  const plannedExpenses = useMemo(
+    () =>
+      bills
+        .filter((bill) => bill.kind === "planned_expense")
+        .sort((left, right) => left.start_date.localeCompare(right.start_date)),
+    [bills],
+  );
+  const rows = useMemo(
+    () => sortBills(regularBills, sort),
+    [regularBills, sort],
+  );
   const monthly = useMemo(
     () =>
       monthlyTotal(
-        bills.filter((bill) => bill.is_active),
+        regularBills.filter((bill) => bill.is_active),
         (bill) => ({
           amount: bill.amount,
           frequency: bill.frequency,
           intervalValue: bill.interval_value,
         }),
       ),
-    [bills],
+    [regularBills],
   );
 
   if (billsQuery.isPending && !bills.length) {
@@ -113,7 +127,7 @@ export function BillsSegment() {
       <SurfaceCard style={styles.summary}>
         <View style={styles.summaryHeader}>
           <Text style={styles.summaryTitle}>
-            {`${formatInteger(bills.length)} ${bills.length === 1 ? "bill" : "bills"} · ${formatCurrency(monthly)} a month`}
+            {`${formatInteger(regularBills.length)} ${regularBills.length === 1 ? "bill" : "bills"} · ${formatCurrency(monthly)} a month`}
           </Text>
           <Pressable
             hitSlop={10}
@@ -147,6 +161,36 @@ export function BillsSegment() {
           />
         ))}
       </View>
+
+      {plannedExpenses.length ? (
+        <View style={styles.plannedSection}>
+          <View style={styles.plannedHeader}>
+            <Text style={styles.plannedTitle}>Planned purchases</Text>
+            <Text style={styles.plannedCount}>
+              {formatInteger(plannedExpenses.length)}
+            </Text>
+          </View>
+          <Text style={styles.plannedBody}>
+            One-time purchases you checked before adding them to the plan.
+          </Text>
+          <View style={styles.rows}>
+            {plannedExpenses.map((bill) => (
+              <EntityRow
+                key={String(bill.id)}
+                dimmed={!bill.is_active}
+                initial={initialOf(bill.name)}
+                onPress={() => {
+                  router.push(`/bills/${bill.id}`);
+                }}
+                subtitle={`Planned for ${formatDate(bill.start_date)}${bill.is_active ? "" : " · paused"}`}
+                tint={theme.colors.primarySoft}
+                title={bill.name}
+                value={formatCurrency(bill.amount)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       <ActionSheet
         onClose={() => {
@@ -193,5 +237,27 @@ const styles = StyleSheet.create({
   },
   rows: {
     gap: theme.spacing.sm,
+  },
+  plannedSection: {
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+  },
+  plannedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  plannedTitle: {
+    color: theme.colors.ink,
+    ...theme.typography.cardTitle,
+  },
+  plannedCount: {
+    color: theme.colors.primaryStrong,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  plannedBody: {
+    color: theme.colors.muted,
+    ...theme.typography.body,
   },
 });
