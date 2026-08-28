@@ -11,6 +11,7 @@ import { useBillReminders } from "@features/notifications/bill-reminder-context"
 import {
   buildPurchasePlanInput,
   normalizePurchasePlannerCushion,
+  shouldShowPurchaseSavingPath,
   type PurchasePlanDraft,
   type PurchasePlanDraftErrors,
   purchasePlanSignature,
@@ -93,6 +94,7 @@ function ResultCard({
   const contributions = preview.saving_plan.feasible_by_target
     ? preview.saving_plan.contributions
     : preview.saving_plan.later_contributions;
+  const showSavingPath = shouldShowPurchaseSavingPath(preview);
 
   return (
     <>
@@ -140,7 +142,7 @@ function ResultCard({
         </SurfaceCard>
       ) : null}
 
-      {contributions.length > 1 ? (
+      {showSavingPath && contributions.length > 1 ? (
         <SurfaceCard>
           <SectionTitle
             subtitle={

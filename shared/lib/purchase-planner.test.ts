@@ -6,6 +6,7 @@ import {
   normalizePurchasePlannerCushion,
   purchasePlanSignature,
   purchaseVerdictContent,
+  shouldShowPurchaseSavingPath,
   validatePurchasePlanDraft,
 } from "@features/purchase-planner/model";
 import { addDaysToIsoDate, todayInAppTimezone } from "@shared/lib/timezone";
@@ -84,6 +85,21 @@ describe("purchase planner", () => {
     assert.equal(
       purchaseVerdictContent({ verdict: "save_across_paychecks" }).title,
       "Set it aside over a few paychecks",
+    );
+  });
+
+  it("shows paycheck-by-paycheck details only for savings recommendations", () => {
+    assert.equal(
+      shouldShowPurchaseSavingPath({ verdict: "save_across_paychecks" }),
+      true,
+    );
+    assert.equal(
+      shouldShowPurchaseSavingPath({ verdict: "choose_later_date" }),
+      true,
+    );
+    assert.equal(
+      shouldShowPurchaseSavingPath({ verdict: "fits_comfortably" }),
+      false,
     );
   });
 });

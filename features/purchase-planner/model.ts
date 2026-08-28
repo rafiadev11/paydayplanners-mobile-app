@@ -162,3 +162,11 @@ export function purchaseVerdictContent(
 ) {
   return VERDICT_COPY[preview.verdict];
 }
+
+export function shouldShowPurchaseSavingPath(
+  preview: Pick<PurchasePlanPreview, "verdict">,
+) {
+  return ["save_across_paychecks", "choose_later_date"].includes(
+    preview.verdict,
+  );
+}
