@@ -133,8 +133,8 @@ const VERDICT_COPY: Record<PurchasePlanVerdict, VerdictContent> = {
   },
   save_across_paychecks: {
     eyebrow: "A savings path works",
-    title: "Set it aside over a few paychecks",
-    body: "Paying all at once would make one paycheck short, but a dated savings goal can reach it safely.",
+    title: "Set it aside before purchase day",
+    body: "A dated savings goal can reserve the amount while keeping each eligible paycheck above your cushion.",
     tone: "accent",
   },
   choose_later_date: {
@@ -165,8 +165,10 @@ export function purchaseVerdictContent(
 
 export function shouldShowPurchaseSavingPath(
   preview: Pick<PurchasePlanPreview, "verdict">,
+  contributionCount: number,
 ) {
-  return ["save_across_paychecks", "choose_later_date"].includes(
-    preview.verdict,
+  return (
+    contributionCount > 0 &&
+    ["save_across_paychecks", "choose_later_date"].includes(preview.verdict)
   );
 }

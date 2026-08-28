@@ -94,7 +94,10 @@ function ResultCard({
   const contributions = preview.saving_plan.feasible_by_target
     ? preview.saving_plan.contributions
     : preview.saving_plan.later_contributions;
-  const showSavingPath = shouldShowPurchaseSavingPath(preview);
+  const showSavingPath = shouldShowPurchaseSavingPath(
+    preview,
+    contributions.length,
+  );
 
   return (
     <>
@@ -142,7 +145,7 @@ function ResultCard({
         </SurfaceCard>
       ) : null}
 
-      {showSavingPath && contributions.length > 1 ? (
+      {showSavingPath ? (
         <SurfaceCard>
           <SectionTitle
             subtitle={

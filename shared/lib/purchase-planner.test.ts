@@ -84,21 +84,25 @@ describe("purchase planner", () => {
   it("maps server verdicts to stable user-facing copy", () => {
     assert.equal(
       purchaseVerdictContent({ verdict: "save_across_paychecks" }).title,
-      "Set it aside over a few paychecks",
+      "Set it aside before purchase day",
     );
   });
 
-  it("shows paycheck-by-paycheck details only for savings recommendations", () => {
+  it("shows even a single contribution only for savings recommendations", () => {
     assert.equal(
-      shouldShowPurchaseSavingPath({ verdict: "save_across_paychecks" }),
+      shouldShowPurchaseSavingPath({ verdict: "save_across_paychecks" }, 1),
       true,
     );
     assert.equal(
-      shouldShowPurchaseSavingPath({ verdict: "choose_later_date" }),
+      shouldShowPurchaseSavingPath({ verdict: "choose_later_date" }, 1),
       true,
     );
     assert.equal(
-      shouldShowPurchaseSavingPath({ verdict: "fits_comfortably" }),
+      shouldShowPurchaseSavingPath({ verdict: "save_across_paychecks" }, 0),
+      false,
+    );
+    assert.equal(
+      shouldShowPurchaseSavingPath({ verdict: "fits_comfortably" }, 2),
       false,
     );
   });
