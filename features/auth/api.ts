@@ -18,6 +18,7 @@ export type User = {
   };
   features?: {
     bill_occurrence_adjustments?: boolean;
+    purchase_planner?: boolean;
   };
 };
 

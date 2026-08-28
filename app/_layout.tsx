@@ -139,6 +139,13 @@ function RootNavigator() {
           />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
+            name="purchase-planner"
+            options={{
+              presentation: "modal",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
             name="account"
             options={{
               title: "Account info",

@@ -81,6 +81,8 @@ export function BillForm({
   const [frequency, setFrequency] = useState<BillInput["frequency"]>(
     (bill?.frequency as BillInput["frequency"]) ?? "monthly",
   );
+  const frequencyOptions =
+    bill?.kind === "planned_expense" ? (["once"] as const) : FREQUENCIES;
   /**
    * A stored bill's `start_date` is when the series began, not when it is due —
    * `due_day` / `weekday` decide that. Show the date the rule really lands on,
@@ -198,6 +200,7 @@ export function BillForm({
     const payload: BillInput = {
       name: name.trim(),
       amount: normalizedAmount,
+      kind: bill?.kind ?? "bill",
       frequency,
       start_date:
         scheduleUnchanged && bill ? bill.start_date : normalizedStartDate!,
@@ -252,7 +255,7 @@ export function BillForm({
       <View style={styles.fieldGroup}>
         <Text style={styles.groupLabel}>How often</Text>
         <View style={styles.chipWrap}>
-          {FREQUENCIES.map((option) => (
+          {frequencyOptions.map((option) => (
             <ChoiceChip
               key={option}
               label={frequencyChipLabel(option)}

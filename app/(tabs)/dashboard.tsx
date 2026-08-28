@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { RefreshControl, StyleSheet, Text, View } from "react-native";
 
@@ -198,6 +198,36 @@ export default function DashboardScreen() {
               <DueBillsCard dashboard={dashboard} />
             ) : null}
 
+            {user?.features?.purchase_planner && dashboard.next_paycheck ? (
+              <SurfaceCard tone="dark">
+                <View style={styles.purchasePlannerCallout}>
+                  <View style={styles.purchasePlannerIcon}>
+                    <MaterialCommunityIcons
+                      color={theme.colors.primarySoft}
+                      name="shopping-outline"
+                      size={24}
+                    />
+                  </View>
+                  <View style={styles.goalCalloutCopy}>
+                    <Text style={styles.purchasePlannerTitle}>
+                      Planning a purchase?
+                    </Text>
+                    <Text style={styles.purchasePlannerBody}>
+                      Try the amount and date against your upcoming paychecks
+                      before adding anything to your plan.
+                    </Text>
+                  </View>
+                </View>
+                <SecondaryButton
+                  icon="chart-timeline-variant-shimmer"
+                  label="Try a purchase"
+                  onPress={() => {
+                    router.push("/purchase-planner" as Href);
+                  }}
+                />
+              </SurfaceCard>
+            ) : null}
+
             {dashboard.savings_goals.length ? (
               <SavingTowardCard
                 dashboard={dashboard}
@@ -267,6 +297,27 @@ const styles = StyleSheet.create({
   },
   goalCalloutBody: {
     color: theme.colors.muted,
+    ...theme.typography.body,
+  },
+  purchasePlannerCallout: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: theme.spacing.md,
+  },
+  purchasePlannerIcon: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.primaryStrong,
+  },
+  purchasePlannerTitle: {
+    color: theme.colors.white,
+    ...theme.typography.cardTitle,
+  },
+  purchasePlannerBody: {
+    color: theme.colors.backgroundStrong,
     ...theme.typography.body,
   },
 });
