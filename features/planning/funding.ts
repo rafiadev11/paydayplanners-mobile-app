@@ -41,10 +41,22 @@ export function splitFundingLabel(bill: BillOccurrence): string | null {
     bill.allocations?.filter((allocation) => Number(allocation.amount) > 0) ??
     [];
   if (allocations.length < 2) return null;
-  return allocations
+  return fundingSourcesLabel(
+    allocations.map((allocation) => ({
+      amount: allocation.amount,
+      name: allocation.paycheck_occurrence?.pay_schedule?.name,
+    })),
+  );
+}
+
+export function fundingSourcesLabel(
+  sources: { amount: string; name?: string | null }[],
+): string | null {
+  if (!sources.length) return null;
+  return sources
     .map(
-      (allocation) =>
-        `${formatCurrency(allocation.amount)} from ${allocation.paycheck_occurrence?.pay_schedule?.name ?? "paycheck"}`,
+      (source) =>
+        `${formatCurrency(source.amount)} from ${source.name ?? "paycheck"}`,
     )
     .join(" + ");
 }

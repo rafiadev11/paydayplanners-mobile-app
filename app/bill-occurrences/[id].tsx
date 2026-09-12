@@ -23,6 +23,7 @@ import {
   type BillOccurrenceAdjustmentErrors,
   validateBillOccurrenceAdjustment,
 } from "@features/planning/bill-occurrence-adjustment";
+import { fundingSourcesLabel } from "@features/planning/funding";
 import {
   fetchBillOccurrence,
   previewBillOccurrenceAdjustment,
@@ -128,6 +129,7 @@ function PaycheckImpact({
     ) ?? [];
   const hasWarning = unfunded || otherShortfalls.length > 0;
   const fundingSources = preview.funding_sources ?? [];
+  const fundingSummary = fundingSourcesLabel(fundingSources);
 
   return (
     <SurfaceCard
@@ -152,18 +154,16 @@ function PaycheckImpact({
           restore it.
         </Text>
       ) : unfunded ? (
-        <Text style={styles.impactBody}>
-          {`${formatCurrency(preview.proposed.unfunded_amount)} will not be covered by a paycheck on this date.`}
-        </Text>
-      ) : fundingSources.length > 1 ? (
-        <Text style={styles.impactBody}>
-          {fundingSources
-            .map(
-              (source) =>
-                `${formatCurrency(source.amount)} from ${source.name ?? "paycheck"}`,
-            )
-            .join(" + ")}
-        </Text>
+        <View>
+          <Text style={styles.impactBody}>
+            {`${formatCurrency(preview.proposed.unfunded_amount)} will not be covered by a paycheck on this date.`}
+          </Text>
+          {fundingSummary ? (
+            <Text style={styles.impactBody}>{fundingSummary}</Text>
+          ) : null}
+        </View>
+      ) : fundingSources.length > 1 && fundingSummary ? (
+        <Text style={styles.impactBody}>{fundingSummary}</Text>
       ) : moved ? (
         <Text style={styles.impactBody}>
           {`Moves from your ${formatWeekdayDate(beforeDate)} paycheck to your ${formatWeekdayDate(afterDate)} paycheck.`}

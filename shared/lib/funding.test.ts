@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildDueBillRows,
+  fundingSourcesLabel,
   nextPaydaySummary,
   splitFundingLabel,
 } from "@features/planning/funding";
@@ -86,6 +87,14 @@ describe("multiple income funding", () => {
       splitFundingLabel({ allocations: [] } as unknown as BillOccurrence),
       null,
     );
+  });
+
+  it("describes a single source for partially funded previews", () => {
+    assert.equal(
+      fundingSourcesLabel([{ amount: "400.00", name: "Salary" }]),
+      "$400 from Salary",
+    );
+    assert.equal(fundingSourcesLabel([]), null);
   });
 });
 
