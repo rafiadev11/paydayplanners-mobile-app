@@ -203,6 +203,20 @@ function billSubtitle(bill: BillOccurrence, bounds: PaycheckBounds) {
   if (unfunded > 0) {
     const coveredBy = bill.assigned_paycheck_occurrence?.occurrence_date;
 
+    if (bounds.first && bill.due_date < bounds.first) {
+      return {
+        text: `Due before your first paycheck on ${formatDate(bounds.first)}`,
+        tone: "danger" as const,
+      };
+    }
+
+    if (bounds.last && bill.due_date > bounds.last) {
+      return {
+        text: "No paycheck scheduled before this date yet",
+        tone: "danger" as const,
+      };
+    }
+
     if (splitFunding) {
       return {
         text: `Short ${formatCurrency(unfunded)} · ${splitFunding}`,
@@ -214,20 +228,6 @@ function billSubtitle(bill: BillOccurrence, bounds: PaycheckBounds) {
     if (coveredBy) {
       return {
         text: `Short ${formatCurrency(unfunded)} — the ${formatDate(coveredBy)} paycheck covers the rest`,
-        tone: "danger" as const,
-      };
-    }
-
-    if (bounds.first && bill.due_date < bounds.first) {
-      return {
-        text: `Due before your first paycheck on ${formatDate(bounds.first)}`,
-        tone: "danger" as const,
-      };
-    }
-
-    if (bounds.last && bill.due_date > bounds.last) {
-      return {
-        text: "No paycheck scheduled before this date yet",
         tone: "danger" as const,
       };
     }

@@ -162,12 +162,17 @@ function PaycheckImpact({
             <Text style={styles.impactBody}>{fundingSummary}</Text>
           ) : null}
         </View>
+      ) : moved ? (
+        <View>
+          <Text style={styles.impactBody}>
+            {`Moves from your ${formatWeekdayDate(beforeDate)} paycheck to your ${formatWeekdayDate(afterDate)} paycheck.`}
+          </Text>
+          {fundingSources.length > 1 && fundingSummary ? (
+            <Text style={styles.impactBody}>{fundingSummary}</Text>
+          ) : null}
+        </View>
       ) : fundingSources.length > 1 && fundingSummary ? (
         <Text style={styles.impactBody}>{fundingSummary}</Text>
-      ) : moved ? (
-        <Text style={styles.impactBody}>
-          {`Moves from your ${formatWeekdayDate(beforeDate)} paycheck to your ${formatWeekdayDate(afterDate)} paycheck.`}
-        </Text>
       ) : afterDate ? (
         <Text style={styles.impactBody}>
           {`Covered by your ${formatWeekdayDate(afterDate)} paycheck.`}
@@ -178,11 +183,12 @@ function PaycheckImpact({
         </Text>
       )}
 
-      {otherShortfalls.map((bill) => (
-        <Text key={bill.id} style={styles.impactBody}>
-          {`${bill.name ?? "Another bill"} on ${formatWeekdayDate(bill.due_date)} will be short ${formatCurrency(bill.after_unfunded)} (previously ${formatCurrency(bill.before_unfunded)}).`}
-        </Text>
-      ))}
+      {preview.proposed.status !== "skipped" &&
+        otherShortfalls.map((bill) => (
+          <Text key={bill.id} style={styles.impactBody}>
+            {`${bill.name ?? "Another bill"} on ${formatWeekdayDate(bill.due_date)} will be short ${formatCurrency(bill.after_unfunded)} (previously ${formatCurrency(bill.before_unfunded)}).`}
+          </Text>
+        ))}
 
       {preview.impacts.length ? (
         <View style={styles.impactRows}>

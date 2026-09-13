@@ -81,7 +81,7 @@ describe("multiple income funding", () => {
     } as BillOccurrence;
     assert.equal(
       splitFundingLabel(bill),
-      "$800 from Salary + $400 from Side income",
+      "$800.00 from Salary + $400.00 from Side income",
     );
     assert.equal(
       splitFundingLabel({ allocations: [] } as unknown as BillOccurrence),
@@ -92,9 +92,27 @@ describe("multiple income funding", () => {
   it("describes a single source for partially funded previews", () => {
     assert.equal(
       fundingSourcesLabel([{ amount: "400.00", name: "Salary" }]),
-      "$400 from Salary",
+      "$400.00 from Salary",
     );
     assert.equal(fundingSourcesLabel([]), null);
+  });
+
+  it("keeps cent splits exact and dates duplicate schedule names", () => {
+    assert.equal(
+      fundingSourcesLabel([
+        {
+          amount: "812.50",
+          name: "Salary",
+          occurrence_date: "2026-04-01",
+        },
+        {
+          amount: "437.50",
+          name: "Salary",
+          occurrence_date: "2026-04-15",
+        },
+      ]),
+      "$812.50 from Salary (Wed, Apr 1) + $437.50 from Salary (Wed, Apr 15)",
+    );
   });
 });
 

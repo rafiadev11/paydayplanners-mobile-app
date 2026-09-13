@@ -176,16 +176,18 @@ function LegendItem({
 }
 
 function PaydayChip({ paycheck }: { paycheck: NextPaycheck }) {
-  const scheduleName = paycheck.sources
-    .map((source) => source.name ?? "Income")
-    .join(" + ");
+  const sources = paycheck.sources ?? [];
+  const scheduleName =
+    sources.length === 1
+      ? (sources[0]?.name ?? "")
+      : sources.map((source) => source.name ?? "Income").join(" + ");
   const dateLabel = formatWeekdayDate(paycheck.occurrence_date);
 
   return (
     <View style={styles.payday}>
       <View style={styles.paydayCopy}>
         <Text style={styles.paydayEyebrow}>Payday</Text>
-        <Text style={styles.paydayDetail}>
+        <Text numberOfLines={1} style={styles.paydayDetail}>
           {scheduleName ? `${dateLabel} · ${scheduleName}` : dateLabel}
         </Text>
       </View>
@@ -382,8 +384,8 @@ export function NextUpCard({
       </View>
 
       <PaydayChip paycheck={paycheck} />
-      {paycheck.sources.length > 1 &&
-        paycheck.sources.map((source) => (
+      {(paycheck.sources ?? []).length > 1 &&
+        (paycheck.sources ?? []).map((source) => (
           <Text key={source.id} style={styles.body}>
             {source.name ?? "Income"}: {formatCurrency(source.effective_amount)}
           </Text>

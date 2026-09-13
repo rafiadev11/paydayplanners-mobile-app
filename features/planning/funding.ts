@@ -1,5 +1,5 @@
 import type { BillOccurrence, DashboardResponse } from "@features/planning/api";
-import { formatCurrency, formatWeekdayDate } from "@shared/lib/format";
+import { formatCurrencyPrecise, formatWeekdayDate } from "@shared/lib/format";
 
 export type PaydaySummary = {
   occurrence_date: string;
@@ -17,7 +17,7 @@ export type PaydaySummary = {
 export function nextPaydaySummary(
   dashboard: DashboardResponse,
 ): PaydaySummary | null {
-  if (dashboard.next_payday !== undefined) return dashboard.next_payday;
+  if (dashboard.next_payday) return dashboard.next_payday;
   const paycheck = dashboard.next_paycheck;
   if (!paycheck) return null;
   return {
@@ -45,19 +45,33 @@ export function splitFundingLabel(bill: BillOccurrence): string | null {
     allocations.map((allocation) => ({
       amount: allocation.amount,
       name: allocation.paycheck_occurrence?.pay_schedule?.name,
+      occurrence_date: allocation.paycheck_occurrence?.occurrence_date,
     })),
   );
 }
 
 export function fundingSourcesLabel(
-  sources: { amount: string; name?: string | null }[],
+  sources: {
+    amount: string;
+    name?: string | null;
+    occurrence_date?: string | null;
+  }[],
 ): string | null {
   if (!sources.length) return null;
+  const labels = sources.map((source) => source.name ?? "paycheck");
+
   return sources
-    .map(
-      (source) =>
-        `${formatCurrency(source.amount)} from ${source.name ?? "paycheck"}`,
-    )
+    .map((source, index) => {
+      const label = labels[index];
+      const repeated =
+        labels.filter((candidate) => candidate === label).length > 1;
+      const date =
+        repeated && source.occurrence_date
+          ? ` (${formatWeekdayDate(source.occurrence_date)})`
+          : "";
+
+      return `${formatCurrencyPrecise(source.amount)} from ${label}${date}`;
+    })
     .join(" + ");
 }
 
@@ -78,6 +92,9 @@ function toRow(
   fallbackCoveredBy: string | null,
   hasFundingData: boolean,
 ): DueBillRow {
+  // Allocation-backed dashboard rows omit funding totals on older servers. In
+  // that fallback shape, treating a missing value as a shortfall would make a
+  // covered bill appear unfunded.
   const unfunded = hasFundingData ? Number(occurrence.unfunded_amount ?? 0) : 0;
   const assignedDate = occurrence.assigned_paycheck_occurrence?.occurrence_date;
 
@@ -100,9 +117,8 @@ function toRow(
 }
 
 export function buildDueBillRows(dashboard: DashboardResponse): DueBillRow[] {
-  const paydayLabel = dashboard.next_paycheck
-    ? formatWeekdayDate(dashboard.next_paycheck.occurrence_date)
-    : null;
+  const payday = nextPaydaySummary(dashboard);
+  const paydayLabel = payday ? formatWeekdayDate(payday.occurrence_date) : null;
   const rows = new Map<string, DueBillRow>();
 
   for (const occurrence of dashboard.next_payday_bill_occurrences ??

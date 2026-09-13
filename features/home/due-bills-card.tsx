@@ -15,8 +15,6 @@ import { formatCurrency, formatDateChipParts } from "@shared/lib/format";
 import { SecondaryButton, SurfaceCard } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
-export { buildDueBillRows } from "@features/planning/funding";
-
 const COLLAPSED_ROW_COUNT = 6;
 
 function DateChip({
@@ -81,7 +79,7 @@ function BillRow({
         ? `Short ${formatCurrency(row.unfunded)} · ${row.splitFunding}`
         : `Short ${formatCurrency(row.unfunded)} — no paycheck covers this yet`
       : row.splitFunding
-        ? row.splitFunding
+        ? `${row.isPlannedPurchase ? "Planned purchase · " : ""}${row.splitFunding}`
         : row.coveredBy
           ? `${row.isPlannedPurchase ? "Planned purchase · " : ""}Covered by ${row.coveredBy} paycheck`
           : "Not covered by a paycheck yet";
