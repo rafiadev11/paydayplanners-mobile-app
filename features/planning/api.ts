@@ -241,6 +241,22 @@ export type DashboardResponse = {
     }[];
   } | null;
   next_payday_bill_occurrences?: BillOccurrence[];
+  current_plan?: {
+    effective_amount: string;
+    assigned_total: string;
+    savings_goal_total: string;
+    remaining_amount: string;
+    sources: {
+      id: number | string;
+      name?: string | null;
+      occurrence_date: string;
+      effective_amount: string;
+      assigned_total: string;
+      savings_goal_total: string;
+      remaining_amount: string;
+    }[];
+  } | null;
+  current_plan_bill_occurrences?: BillOccurrence[];
   next_paycheck:
     | (PaycheckOccurrence & {
         assigned_total: string;

@@ -221,7 +221,7 @@ export function DueBillsCard({ dashboard }: { dashboard: DashboardResponse }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={styles.title}>This paycheck&apos;s plan</Text>
+        <Text style={styles.title}>Current plan</Text>
         <Text style={styles.counter}>
           {`${rows.length - paidCount} left · ${paidCount} paid`}
         </Text>

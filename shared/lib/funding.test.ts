@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildDueBillRows,
+  currentPlanSummary,
   fundingSourcesLabel,
   nextPaydaySummary,
+  planBalanceLabel,
   splitFundingLabel,
 } from "@features/planning/funding";
 import type { BillOccurrence, DashboardResponse } from "@features/planning/api";
@@ -59,6 +61,45 @@ describe("multiple income funding", () => {
       nextPaydaySummary({ next_paycheck: null } as DashboardResponse),
       null,
     );
+  });
+
+  it("uses the current income pool across staggered paycheck dates", () => {
+    const currentPlan = {
+      effective_amount: "6400.00",
+      assigned_total: "1154.00",
+      savings_goal_total: "1000.00",
+      remaining_amount: "4246.00",
+      sources: [
+        {
+          id: 1,
+          name: "Sunpower",
+          occurrence_date: "2026-09-11",
+          effective_amount: "4400.00",
+          assigned_total: "1086.00",
+          savings_goal_total: "0.00",
+          remaining_amount: "3314.00",
+        },
+        {
+          id: 2,
+          name: "Tierria Paycheck",
+          occurrence_date: "2026-09-15",
+          effective_amount: "2000.00",
+          assigned_total: "68.00",
+          savings_goal_total: "1000.00",
+          remaining_amount: "932.00",
+        },
+      ],
+    };
+
+    assert.equal(
+      currentPlanSummary({ current_plan: currentPlan } as DashboardResponse),
+      currentPlan,
+    );
+  });
+
+  it("describes the balance after both bills and savings", () => {
+    assert.equal(planBalanceLabel(4246), "left after bills & savings");
+    assert.equal(planBalanceLabel(-154), "short after bills & savings");
   });
 
   it("describes every funding source and ignores zero allocations", () => {
@@ -134,4 +175,32 @@ it("merges payday bills without duplicates and preserves partial funding", () =>
   assert.equal(rows.length, 1);
   assert.equal(rows[0].unfunded, 300);
   assert.equal(rows[0].coveredBy, null);
+});
+
+it("prefers all current-plan bills over the next-payday subset", () => {
+  const earlier = {
+    id: 1,
+    amount: "1086.00",
+    due_date: "2026-09-20",
+    status: "projected",
+    unfunded_amount: "0.00",
+  } as BillOccurrence;
+  const nextPayday = {
+    id: 2,
+    amount: "68.00",
+    due_date: "2026-09-15",
+    status: "projected",
+    unfunded_amount: "0.00",
+  } as BillOccurrence;
+  const rows = buildDueBillRows({
+    next_paycheck: null,
+    current_plan_bill_occurrences: [earlier, nextPayday],
+    next_payday_bill_occurrences: [nextPayday],
+    bills_due_before_next_paycheck: [],
+  } as unknown as DashboardResponse);
+
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    ["2", "1"],
+  );
 });
