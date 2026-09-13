@@ -10,9 +10,12 @@ export type PaydaySummary = {
   sources: {
     id: number | string;
     name?: string | null;
+    occurrence_date?: string;
     effective_amount: string;
   }[];
 };
+
+export type CurrentPlanSummary = Omit<PaydaySummary, "occurrence_date">;
 
 export function nextPaydaySummary(
   dashboard: DashboardResponse,
@@ -34,6 +37,18 @@ export function nextPaydaySummary(
       },
     ],
   };
+}
+
+export function currentPlanSummary(
+  dashboard: DashboardResponse,
+): CurrentPlanSummary | null {
+  return dashboard.current_plan ?? nextPaydaySummary(dashboard);
+}
+
+export function planBalanceLabel(remaining: number): string {
+  return remaining < 0
+    ? "short after bills & savings"
+    : "left after bills & savings";
 }
 
 export function splitFundingLabel(bill: BillOccurrence): string | null {
@@ -121,7 +136,8 @@ export function buildDueBillRows(dashboard: DashboardResponse): DueBillRow[] {
   const paydayLabel = payday ? formatWeekdayDate(payday.occurrence_date) : null;
   const rows = new Map<string, DueBillRow>();
 
-  for (const occurrence of dashboard.next_payday_bill_occurrences ??
+  for (const occurrence of dashboard.current_plan_bill_occurrences ??
+    dashboard.next_payday_bill_occurrences ??
     dashboard.next_paycheck_bill_occurrences ??
     []) {
     const row = toRow(

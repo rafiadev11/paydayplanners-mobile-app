@@ -1,5 +1,7 @@
 import {
+  currentPlanSummary,
   nextPaydaySummary,
+  planBalanceLabel,
   type PaydaySummary,
 } from "@features/planning/funding";
 import { StyleSheet, Text, View } from "react-native";
@@ -338,23 +340,22 @@ export function NextUpCard({
   }
 
   const { paycheck } = state;
-  const bills = Number(paycheck.assigned_total ?? 0);
-  const savings = Number(paycheck.savings_goal_total ?? 0);
-  const leftover = Number(paycheck.remaining_amount ?? 0);
+  const plan = currentPlanSummary(dashboard) ?? paycheck;
+  const bills = Number(plan.assigned_total ?? 0);
+  const savings = Number(plan.savings_goal_total ?? 0);
+  const leftover = Number(plan.remaining_amount ?? 0);
   const short = leftover < 0;
   const paydayLabel = formatWeekdayDate(paycheck.occurrence_date);
 
   return (
     <SurfaceCard tone="dark" style={styles.card}>
-      <Text style={styles.eyebrow}>Your next payday</Text>
+      <Text style={styles.eyebrow}>Your current plan</Text>
 
       <View style={styles.heroRow}>
         <Text style={[styles.heroValue, short ? styles.heroValueShort : null]}>
           {formatCurrency(Math.abs(leftover))}
         </Text>
-        <Text style={styles.heroCaption}>
-          {short ? "short after bills" : "left after bills"}
-        </Text>
+        <Text style={styles.heroCaption}>{planBalanceLabel(leftover)}</Text>
       </View>
 
       <Text style={styles.body}>{coverageLine(dashboard, paydayLabel)}</Text>
@@ -384,10 +385,14 @@ export function NextUpCard({
       </View>
 
       <PaydayChip paycheck={paycheck} />
-      {(paycheck.sources ?? []).length > 1 &&
-        (paycheck.sources ?? []).map((source) => (
+      {(plan.sources ?? []).length > 1 &&
+        (plan.sources ?? []).map((source) => (
           <Text key={source.id} style={styles.body}>
-            {source.name ?? "Income"}: {formatCurrency(source.effective_amount)}
+            {source.name ?? "Income"}
+            {source.occurrence_date
+              ? ` (${formatWeekdayDate(source.occurrence_date)})`
+              : ""}
+            : {formatCurrency(source.effective_amount)}
           </Text>
         ))}
     </SurfaceCard>
