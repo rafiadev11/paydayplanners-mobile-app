@@ -1,3 +1,4 @@
+import { buildDueBillRows, type DueBillRow } from "@features/planning/funding";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { type Href, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -5,84 +6,16 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   updateBillOccurrenceStatus,
-  type BillOccurrence,
   type BillOccurrenceStatus,
   type DashboardResponse,
 } from "@features/planning/api";
 import { useAuth } from "@features/auth/auth-context";
 import { getApiErrorMessage } from "@shared/lib/api-error";
-import {
-  formatCurrency,
-  formatDateChipParts,
-  formatWeekdayDate,
-} from "@shared/lib/format";
+import { formatCurrency, formatDateChipParts } from "@shared/lib/format";
 import { SecondaryButton, SurfaceCard } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
 const COLLAPSED_ROW_COUNT = 6;
-
-type DueBillRow = {
-  id: string;
-  name: string;
-  dueDate: string;
-  amount: string;
-  status: string;
-  unfunded: number;
-  coveredBy: string | null;
-  isPlannedPurchase: boolean;
-};
-
-function toRow(
-  occurrence: BillOccurrence,
-  fallbackCoveredBy: string | null,
-  hasFundingData: boolean,
-): DueBillRow {
-  const unfunded = hasFundingData ? Number(occurrence.unfunded_amount ?? 0) : 0;
-  const assignedDate = occurrence.assigned_paycheck_occurrence?.occurrence_date;
-
-  return {
-    id: String(occurrence.id),
-    name: occurrence.bill?.name ?? "Bill",
-    dueDate: occurrence.due_date,
-    amount: occurrence.effective_amount ?? occurrence.amount,
-    status: occurrence.status,
-    unfunded,
-    isPlannedPurchase: occurrence.bill?.kind === "planned_expense",
-    coveredBy:
-      unfunded > 0
-        ? null
-        : assignedDate
-          ? formatWeekdayDate(assignedDate)
-          : fallbackCoveredBy,
-  };
-}
-
-/**
- * The two dashboard lists overlap: a bill due exactly on payday appears in
- * both. Only `bills_due_before_next_paycheck` carries funding attributes, so it
- * wins on conflict — items from `next_paycheck_bill_occurrences` are covered by
- * definition and must not be read for `unfunded_amount`.
- */
-export function buildDueBillRows(dashboard: DashboardResponse): DueBillRow[] {
-  const paydayLabel = dashboard.next_paycheck
-    ? formatWeekdayDate(dashboard.next_paycheck.occurrence_date)
-    : null;
-  const rows = new Map<string, DueBillRow>();
-
-  for (const occurrence of dashboard.next_paycheck_bill_occurrences ?? []) {
-    const row = toRow(occurrence, paydayLabel, false);
-    rows.set(row.id, row);
-  }
-
-  for (const occurrence of dashboard.bills_due_before_next_paycheck ?? []) {
-    const row = toRow(occurrence, paydayLabel, true);
-    rows.set(row.id, row);
-  }
-
-  return [...rows.values()]
-    .filter((row) => row.status !== "skipped")
-    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-}
 
 function DateChip({
   dueDate,
@@ -142,10 +75,14 @@ function BillRow({
       ? "Purchased"
       : "Paid"
     : short
-      ? `Short ${formatCurrency(row.unfunded)} — no paycheck covers this yet`
-      : row.coveredBy
-        ? `${row.isPlannedPurchase ? "Planned purchase · " : ""}Covered by ${row.coveredBy} paycheck`
-        : "Not covered by a paycheck yet";
+      ? row.splitFunding
+        ? `Short ${formatCurrency(row.unfunded)} · ${row.splitFunding}`
+        : `Short ${formatCurrency(row.unfunded)} — no paycheck covers this yet`
+      : row.splitFunding
+        ? `${row.isPlannedPurchase ? "Planned purchase · " : ""}${row.splitFunding}`
+        : row.coveredBy
+          ? `${row.isPlannedPurchase ? "Planned purchase · " : ""}Covered by ${row.coveredBy} paycheck`
+          : "Not covered by a paycheck yet";
 
   return (
     <SurfaceCard style={[styles.row, paid ? styles.rowPaid : null]}>

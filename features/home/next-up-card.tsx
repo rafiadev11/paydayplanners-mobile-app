@@ -1,3 +1,7 @@
+import {
+  nextPaydaySummary,
+  type PaydaySummary,
+} from "@features/planning/funding";
 import { StyleSheet, Text, View } from "react-native";
 
 import { AccountButton } from "@features/account/account-drawer";
@@ -18,7 +22,7 @@ import {
 } from "@shared/ui/primitives";
 import { theme, withAlpha } from "@shared/ui/theme";
 
-type NextPaycheck = NonNullable<DashboardResponse["next_paycheck"]>;
+type NextPaycheck = PaydaySummary;
 
 export type HomeHeroState =
   | { kind: "welcome" }
@@ -51,7 +55,7 @@ export function resolveHomeHeroState({
   hasPaySchedules: boolean | null;
   hasBills: boolean | null;
 }): HomeHeroState {
-  const paycheck = dashboard.next_paycheck;
+  const paycheck = nextPaydaySummary(dashboard);
 
   if (!paycheck) {
     if (isFirstOpen) return { kind: "welcome" };
@@ -172,7 +176,11 @@ function LegendItem({
 }
 
 function PaydayChip({ paycheck }: { paycheck: NextPaycheck }) {
-  const scheduleName = paycheck.pay_schedule?.name;
+  const sources = paycheck.sources ?? [];
+  const scheduleName =
+    sources.length === 1
+      ? (sources[0]?.name ?? "")
+      : sources.map((source) => source.name ?? "Income").join(" + ");
   const dateLabel = formatWeekdayDate(paycheck.occurrence_date);
 
   return (
@@ -184,7 +192,7 @@ function PaydayChip({ paycheck }: { paycheck: NextPaycheck }) {
         </Text>
       </View>
       <Text style={styles.paydayAmount}>
-        {`+${formatCurrency(paycheck.effective_amount ?? paycheck.amount)}`}
+        {`+${formatCurrency(paycheck.effective_amount)}`}
       </Text>
     </View>
   );
@@ -338,7 +346,7 @@ export function NextUpCard({
 
   return (
     <SurfaceCard tone="dark" style={styles.card}>
-      <Text style={styles.eyebrow}>Your next paycheck</Text>
+      <Text style={styles.eyebrow}>Your next payday</Text>
 
       <View style={styles.heroRow}>
         <Text style={[styles.heroValue, short ? styles.heroValueShort : null]}>
@@ -376,6 +384,12 @@ export function NextUpCard({
       </View>
 
       <PaydayChip paycheck={paycheck} />
+      {(paycheck.sources ?? []).length > 1 &&
+        (paycheck.sources ?? []).map((source) => (
+          <Text key={source.id} style={styles.body}>
+            {source.name ?? "Income"}: {formatCurrency(source.effective_amount)}
+          </Text>
+        ))}
     </SurfaceCard>
   );
 }

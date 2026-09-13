@@ -130,6 +130,19 @@ export type BillOccurrenceAdjustmentPreview = {
     name?: string | null;
   } | null;
   impacts: BillOccurrenceAdjustmentImpact[];
+  funding_sources?: {
+    id: number | string;
+    name?: string | null;
+    occurrence_date?: string | null;
+    amount: string;
+  }[];
+  bill_impacts?: {
+    id: number | string;
+    name?: string | null;
+    due_date: string;
+    before_unfunded: string;
+    after_unfunded: string;
+  }[];
   planning_revision: number;
 };
 
@@ -212,6 +225,22 @@ export type DashboardResponse = {
     unallocated_savings_goal_total: string;
     remaining_after_assigned: string;
   };
+  next_payday?: {
+    occurrence_date: string;
+    effective_amount: string;
+    assigned_total: string;
+    savings_goal_total: string;
+    remaining_amount: string;
+    sources: {
+      id: number | string;
+      name?: string | null;
+      effective_amount: string;
+      assigned_total: string;
+      savings_goal_total: string;
+      remaining_amount: string;
+    }[];
+  } | null;
+  next_payday_bill_occurrences?: BillOccurrence[];
   next_paycheck:
     | (PaycheckOccurrence & {
         assigned_total: string;

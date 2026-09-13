@@ -23,6 +23,7 @@ import {
   type BillOccurrenceAdjustmentErrors,
   validateBillOccurrenceAdjustment,
 } from "@features/planning/bill-occurrence-adjustment";
+import { fundingSourcesLabel } from "@features/planning/funding";
 import {
   fetchBillOccurrence,
   previewBillOccurrenceAdjustment,
@@ -122,16 +123,23 @@ function PaycheckImpact({
   const afterDate = preview.after_paycheck?.occurrence_date;
   const moved = beforeDate && afterDate && beforeDate !== afterDate;
   const unfunded = Number(preview.proposed.unfunded_amount) > 0;
+  const otherShortfalls =
+    preview.bill_impacts?.filter(
+      (bill) => Number(bill.after_unfunded) > Number(bill.before_unfunded),
+    ) ?? [];
+  const hasWarning = unfunded || otherShortfalls.length > 0;
+  const fundingSources = preview.funding_sources ?? [];
+  const fundingSummary = fundingSourcesLabel(fundingSources);
 
   return (
     <SurfaceCard
       style={styles.impactCard}
-      tone={unfunded ? "warning" : "accent"}
+      tone={hasWarning ? "warning" : "accent"}
     >
       <View style={styles.impactHeading}>
         <MaterialCommunityIcons
-          color={unfunded ? theme.colors.warning : theme.colors.primaryStrong}
-          name={unfunded ? "alert-outline" : "chart-timeline-variant"}
+          color={hasWarning ? theme.colors.warning : theme.colors.primaryStrong}
+          name={hasWarning ? "alert-outline" : "chart-timeline-variant"}
           size={22}
         />
         <Text style={styles.impactTitle}>Paycheck impact</Text>
@@ -146,13 +154,25 @@ function PaycheckImpact({
           restore it.
         </Text>
       ) : unfunded ? (
-        <Text style={styles.impactBody}>
-          {`${formatCurrency(preview.proposed.unfunded_amount)} will not be covered by a paycheck on this date.`}
-        </Text>
+        <View>
+          <Text style={styles.impactBody}>
+            {`${formatCurrency(preview.proposed.unfunded_amount)} will not be covered by a paycheck on this date.`}
+          </Text>
+          {fundingSummary ? (
+            <Text style={styles.impactBody}>{fundingSummary}</Text>
+          ) : null}
+        </View>
       ) : moved ? (
-        <Text style={styles.impactBody}>
-          {`Moves from your ${formatWeekdayDate(beforeDate)} paycheck to your ${formatWeekdayDate(afterDate)} paycheck.`}
-        </Text>
+        <View>
+          <Text style={styles.impactBody}>
+            {`Moves from your ${formatWeekdayDate(beforeDate)} paycheck to your ${formatWeekdayDate(afterDate)} paycheck.`}
+          </Text>
+          {fundingSources.length > 1 && fundingSummary ? (
+            <Text style={styles.impactBody}>{fundingSummary}</Text>
+          ) : null}
+        </View>
+      ) : fundingSources.length > 1 && fundingSummary ? (
+        <Text style={styles.impactBody}>{fundingSummary}</Text>
       ) : afterDate ? (
         <Text style={styles.impactBody}>
           {`Covered by your ${formatWeekdayDate(afterDate)} paycheck.`}
@@ -162,6 +182,13 @@ function PaycheckImpact({
           This payment is not covered by a paycheck yet.
         </Text>
       )}
+
+      {preview.proposed.status !== "skipped" &&
+        otherShortfalls.map((bill) => (
+          <Text key={bill.id} style={styles.impactBody}>
+            {`${bill.name ?? "Another bill"} on ${formatWeekdayDate(bill.due_date)} will be short ${formatCurrency(bill.after_unfunded)} (previously ${formatCurrency(bill.before_unfunded)}).`}
+          </Text>
+        ))}
 
       {preview.impacts.length ? (
         <View style={styles.impactRows}>

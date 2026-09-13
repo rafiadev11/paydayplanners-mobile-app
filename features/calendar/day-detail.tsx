@@ -1,3 +1,4 @@
+import { splitFundingLabel } from "@features/planning/funding";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { type Href, useRouter } from "expo-router";
 import {
@@ -197,17 +198,10 @@ function billSubtitle(bill: BillOccurrence, bounds: PaycheckBounds) {
   }
 
   const unfunded = unfundedAmount(bill);
+  const splitFunding = splitFundingLabel(bill);
 
   if (unfunded > 0) {
     const coveredBy = bill.assigned_paycheck_occurrence?.occurrence_date;
-
-    // Partly funded: a paycheck is attached but does not cover the whole bill.
-    if (coveredBy) {
-      return {
-        text: `Short ${formatCurrency(unfunded)} — the ${formatDate(coveredBy)} paycheck covers the rest`,
-        tone: "danger" as const,
-      };
-    }
 
     if (bounds.first && bill.due_date < bounds.first) {
       return {
@@ -219,6 +213,21 @@ function billSubtitle(bill: BillOccurrence, bounds: PaycheckBounds) {
     if (bounds.last && bill.due_date > bounds.last) {
       return {
         text: "No paycheck scheduled before this date yet",
+        tone: "danger" as const,
+      };
+    }
+
+    if (splitFunding) {
+      return {
+        text: `Short ${formatCurrency(unfunded)} · ${splitFunding}`,
+        tone: "danger" as const,
+      };
+    }
+
+    // Partly funded: a paycheck is attached but does not cover the whole bill.
+    if (coveredBy) {
+      return {
+        text: `Short ${formatCurrency(unfunded)} — the ${formatDate(coveredBy)} paycheck covers the rest`,
         tone: "danger" as const,
       };
     }
@@ -238,9 +247,11 @@ function billSubtitle(bill: BillOccurrence, bounds: PaycheckBounds) {
     bill.bill?.kind === "planned_expense" ? "Planned purchase · " : "";
 
   return {
-    text: coveredBy
-      ? `${prefix}Covered by ${formatWeekdayDate(coveredBy)} paycheck`
-      : `${prefix}Not covered by a paycheck yet`,
+    text: splitFunding
+      ? `${prefix}${splitFunding}`
+      : coveredBy
+        ? `${prefix}Covered by ${formatWeekdayDate(coveredBy)} paycheck`
+        : `${prefix}Not covered by a paycheck yet`,
     tone: "muted" as const,
   };
 }
