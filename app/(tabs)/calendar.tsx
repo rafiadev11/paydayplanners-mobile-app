@@ -205,7 +205,13 @@ export default function CalendarScreen() {
    * old forecast on screen — which has no data for the month now being shown.
    * Fade it while the new window lands rather than implying the month is empty.
    */
-  const settling = forecastQuery.isPlaceholderData && forecastQuery.isFetching;
+  const settling = forecastQuery.isPlaceholderData;
+  // A paused request can retain another month's forecast as placeholder data.
+  // Never present that data as the current timeline, even while offline.
+  const timelineWaitingForConnection =
+    view === "timeline" &&
+    forecastQuery.fetchStatus === "paused" &&
+    (loading || settling);
 
   return (
     <AppScreen
@@ -235,7 +241,13 @@ export default function CalendarScreen() {
         onChange={changeView}
       />
 
-      {loading || !viewReady ? (
+      {timelineWaitingForConnection ? (
+        <ErrorState
+          title="Your timeline needs a connection"
+          body="Connect to the internet to load your upcoming paydays."
+          onRetry={refresh}
+        />
+      ) : loading || !viewReady ? (
         <LoadingState label="Loading your calendar…" />
       ) : forecastQuery.isError ? (
         <ErrorState
