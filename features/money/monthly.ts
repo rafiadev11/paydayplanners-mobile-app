@@ -4,7 +4,7 @@
  */
 const MONTHLY_MULTIPLIER: Record<string, number> = {
   weekly: 52 / 12,
-  biweekly: 26 / 12,
+  biweekly: 52 / 12,
   semimonthly: 2,
   monthly: 1,
   yearly: 1 / 12,
@@ -21,12 +21,19 @@ export function monthlyEquivalent(
 ) {
   const multiplier = frequency ? MONTHLY_MULTIPLIER[frequency] : undefined;
 
-  if (multiplier === undefined) {
+  if (typeof multiplier !== "number") {
     return 0;
   }
 
   // A weekly rule with `interval_value: 2` fires fortnightly, not weekly.
-  const interval = intervalValue && intervalValue > 0 ? intervalValue : 1;
+  // The server stores weekly intervals in weeks. For semimonthly income,
+  // interval_value is the second payday, not a recurrence multiplier.
+  const interval =
+    frequency === "biweekly"
+      ? Math.max(2, intervalValue ?? 2)
+      : frequency === "weekly"
+        ? Math.max(1, intervalValue ?? 1)
+        : 1;
 
   return (Number(amount ?? 0) * multiplier) / interval;
 }
