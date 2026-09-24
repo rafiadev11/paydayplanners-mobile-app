@@ -1,6 +1,10 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
+
+import { SegmentedControl } from "@features/money/segmented-control";
+import { MoneyTimeline } from "@features/timeline/money-timeline";
+import { calendarViewStorage } from "@shared/storage/secure";
 
 import { useAuth } from "@features/auth/auth-context";
 import {
@@ -41,7 +45,59 @@ const HISTORY_LIMIT_MONTHS = 12;
 
 export default function CalendarScreen() {
   const router = useRouter();
-  const { date: routedDate } = useLocalSearchParams<{ date?: string }>();
+  const { date: routedDate, view: routedView } = useLocalSearchParams<{
+    date?: string;
+    view?: string;
+  }>();
+  const [view, setView] = useState<"timeline" | "calendar">(
+    routedDate || routedView === "calendar" ? "calendar" : "timeline",
+  );
+  const [viewReady, setViewReady] = useState(false);
+  const viewChosen = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    void calendarViewStorage
+      .get()
+      .then((saved) => {
+        if (
+          active &&
+          !viewChosen.current &&
+          !routedDate &&
+          !routedView &&
+          (saved === "timeline" || saved === "calendar")
+        )
+          setView(saved);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setViewReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [routedDate, routedView]);
+
+  useEffect(() => {
+    if (routedDate || routedView === "calendar" || routedView === "timeline") {
+      viewChosen.current = true;
+      setView(
+        routedDate
+          ? "calendar"
+          : routedView === "calendar"
+            ? "calendar"
+            : "timeline",
+      );
+      // Consume navigation intent so opening the same link again still works.
+      router.setParams({ date: undefined, view: undefined });
+    }
+  }, [routedDate, routedView, router]);
+
+  const changeView = (next: "timeline" | "calendar") => {
+    viewChosen.current = true;
+    setView(next);
+    void calendarViewStorage.set(next).catch(() => {});
+  };
   const { user } = useAuth();
   const planningRevision = usePlanningRevision();
   const scope = { revision: planningRevision, userId: user?.id };
@@ -53,6 +109,7 @@ export default function CalendarScreen() {
 
   const [visibleMonth, setVisibleMonth] = useState(monthKeyOf(initialDate));
   const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [timelineDate, setTimelineDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (!routedDate || !/^\d{4}-\d{2}-\d{2}$/.test(routedDate)) return;
@@ -68,7 +125,9 @@ export default function CalendarScreen() {
    * moves the anchor and refetches.
    */
   const anchorMonth =
-    compareMonths(visibleMonth, currentMonth) < 0 ? visibleMonth : currentMonth;
+    view === "calendar" && compareMonths(visibleMonth, currentMonth) < 0
+      ? visibleMonth
+      : currentMonth;
 
   const forecastWindow = useMemo(
     () => forecastWindowForMonth(anchorMonth),
@@ -159,11 +218,24 @@ export default function CalendarScreen() {
       }
     >
       <ScreenHeader
-        subtitle="Every paycheck and bill, on the day it happens."
-        title="Calendar"
+        subtitle={
+          view === "timeline"
+            ? "A little clarity for every payday."
+            : "Every paycheck and bill, on the day it happens."
+        }
+        title={view === "timeline" ? "Your money, ahead." : "Calendar"}
       />
 
-      {loading ? (
+      <SegmentedControl
+        segments={[
+          { key: "timeline", label: "Timeline" },
+          { key: "calendar", label: "Calendar" },
+        ]}
+        value={view}
+        onChange={changeView}
+      />
+
+      {loading || !viewReady ? (
         <LoadingState label="Loading your calendar…" />
       ) : forecastQuery.isError ? (
         <ErrorState
@@ -171,6 +243,18 @@ export default function CalendarScreen() {
           onRetry={refresh}
           title="We could not load your calendar"
         />
+      ) : forecast && view === "timeline" ? (
+        settling ? (
+          <LoadingState label="Loading your upcoming paydays…" />
+        ) : (
+          <MoneyTimeline
+            key={String(user?.id)}
+            forecast={forecast}
+            today={today}
+            selectedDate={timelineDate}
+            onSelectDate={setTimelineDate}
+          />
+        )
       ) : forecast && !hasAnyActivity(forecast) ? (
         <View style={styles.emptyWrap}>
           <EmptyState
