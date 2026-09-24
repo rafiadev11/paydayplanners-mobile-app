@@ -1,4 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 
 import { theme, withAlpha } from "@shared/ui/theme";
 
@@ -20,6 +26,8 @@ export function EntityRow({
   valueTone = "default",
   dimmed = false,
   onPress,
+  stacked = false,
+  adaptive = false,
 }: {
   initial: string;
   tint: string;
@@ -29,10 +37,17 @@ export function EntityRow({
   valueTone?: "default" | "income";
   dimmed?: boolean;
   onPress: () => void;
+  stacked?: boolean;
+  adaptive?: boolean;
 }) {
+  const { fontScale, width } = useWindowDimensions();
+  const stackValue =
+    stacked ||
+    (adaptive && (fontScale >= 1.3 || width < 360 || value.length > 12));
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`${title}, ${value}, ${subtitle}`}
       onPress={onPress}
       style={({ pressed }) => [
         styles.row,
@@ -45,22 +60,40 @@ export function EntityRow({
       </View>
 
       <View style={styles.copy}>
-        <Text numberOfLines={1} style={styles.title}>
+        <Text
+          numberOfLines={adaptive || stackValue ? undefined : 1}
+          style={styles.title}
+        >
           {title}
         </Text>
-        <Text numberOfLines={1} style={styles.subtitle}>
+        <Text
+          numberOfLines={adaptive || stackValue ? undefined : 1}
+          style={styles.subtitle}
+        >
           {subtitle}
         </Text>
+        {stackValue ? (
+          <Text
+            style={[
+              styles.value,
+              valueTone === "income" ? styles.valueIncome : null,
+            ]}
+          >
+            {value}
+          </Text>
+        ) : null}
       </View>
 
-      <Text
-        style={[
-          styles.value,
-          valueTone === "income" ? styles.valueIncome : null,
-        ]}
-      >
-        {value}
-      </Text>
+      {!stackValue ? (
+        <Text
+          style={[
+            styles.value,
+            valueTone === "income" ? styles.valueIncome : null,
+          ]}
+        >
+          {value}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }

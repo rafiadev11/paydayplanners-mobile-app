@@ -1,17 +1,30 @@
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useAuth } from "@features/auth/auth-context";
 import { avatarTint, EntityRow } from "@features/money/entity-row";
-import { billCadenceLabel, initialOf } from "@features/money/labels";
-import { monthlyTotal } from "@features/money/monthly";
-import { type Bill } from "@features/planning/api";
+import { initialOf } from "@features/money/labels";
+import {
+  buildBillGroups,
+  changedBillGroups,
+  categoryName,
+  billListScheduleLabel,
+  type BillGroupKey,
+  type BillSort,
+} from "@features/money/bill-groups";
+import type { Bill } from "@features/planning/api";
 import { useBillsQuery } from "@features/planning/queries";
 import { usePlanningRevision } from "@shared/api/planning-revision";
 import { useRefetchStaleOnFocus } from "@shared/api/use-refetch-stale-on-focus";
 import { getApiErrorMessage } from "@shared/lib/api-error";
-import { formatCurrency, formatDate, formatInteger } from "@shared/lib/format";
+import { formatCurrencyPrecise as money } from "@shared/lib/format";
 import { ActionSheet, type ActionSheetOption } from "@shared/ui/action-sheet";
 import {
   EmptyState,
@@ -21,42 +34,16 @@ import {
 } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
-type BillSort = "amount" | "name" | "dueDay" | "category";
-
 const SORT_OPTIONS: ActionSheetOption<BillSort>[] = [
   { key: "amount", label: "Amount" },
   { key: "name", label: "Name" },
-  { key: "dueDay", label: "Due day" },
+  { key: "schedule", label: "Schedule (calendar order)" },
   { key: "category", label: "Category" },
 ];
-
-function categoryName(bill: Bill) {
-  return bill.bill_category?.name ?? "Uncategorized";
-}
-
-function sortBills(bills: Bill[], sort: BillSort) {
-  const sorted = [...bills];
-
-  switch (sort) {
-    case "amount":
-      return sorted.sort((a, b) => Number(b.amount) - Number(a.amount));
-    case "name":
-      return sorted.sort((a, b) => a.name.localeCompare(b.name));
-    case "dueDay":
-      // Rules without a day of the month have no place in that order, so they
-      // sort to the end rather than pretending to be the 1st.
-      return sorted.sort((a, b) => (a.due_day ?? 32) - (b.due_day ?? 32));
-    case "category":
-      return sorted.sort(
-        (a, b) =>
-          categoryName(a).localeCompare(categoryName(b)) ||
-          a.name.localeCompare(b.name),
-      );
-  }
-}
-
 export function BillsSegment() {
   const router = useRouter();
+  const { fontScale, width } = useWindowDimensions();
+  const largeLayout = fontScale >= 1.3 || width < 360;
   const { user } = useAuth();
   const planningRevision = usePlanningRevision();
   const billsQuery = useBillsQuery({
@@ -65,43 +52,35 @@ export function BillsSegment() {
   });
   const [sort, setSort] = useState<BillSort>("amount");
   const [sortOpen, setSortOpen] = useState(false);
-
+  const [collapsed, setCollapsed] = useState<Set<BillGroupKey>>(new Set());
+  const previous = useRef<Bill[] | undefined>(undefined);
   useRefetchStaleOnFocus(billsQuery);
-
   const bills = useMemo(() => billsQuery.data ?? [], [billsQuery.data]);
-  const regularBills = useMemo(
-    () => bills.filter((bill) => bill.kind !== "planned_expense"),
-    [bills],
+  const groups = useMemo(() => buildBillGroups(bills, sort), [bills, sort]);
+  useEffect(() => {
+    if (!billsQuery.data) return;
+    if (previous.current) {
+      const changed = changedBillGroups(previous.current, bills);
+      if (changed.size)
+        setCollapsed(
+          (current) => new Set([...current].filter((key) => !changed.has(key))),
+        );
+    }
+    previous.current = bills;
+  }, [bills, billsQuery.data]);
+  const recurring = groups.filter((group) =>
+    ["monthly", "yearly", "other", "unknown"].includes(group.key),
   );
-  const plannedExpenses = useMemo(
-    () =>
-      bills
-        .filter((bill) => bill.kind === "planned_expense")
-        .sort((left, right) => left.start_date.localeCompare(right.start_date)),
-    [bills],
+  const activeCount = recurring.reduce(
+    (sum, group) => sum + group.activeCount,
+    0,
   );
-  const rows = useMemo(
-    () => sortBills(regularBills, sort),
-    [regularBills, sort],
-  );
-  const monthly = useMemo(
-    () =>
-      monthlyTotal(
-        regularBills.filter((bill) => bill.is_active),
-        (bill) => ({
-          amount: bill.amount,
-          frequency: bill.frequency,
-          intervalValue: bill.interval_value,
-        }),
-      ),
-    [regularBills],
-  );
-
-  if (billsQuery.isPending && !bills.length) {
-    return <LoadingState label="Loading the bills you owe each month." />;
-  }
-
-  if (billsQuery.error) {
+  const excluded =
+    groups.find((group) => group.key === "unknown")?.activeCount ?? 0;
+  const monthly = recurring.reduce((sum, group) => sum + group.monthly, 0);
+  if (billsQuery.isPending && !bills.length)
+    return <LoadingState label="Loading your bills." />;
+  if (billsQuery.error)
     return (
       <ErrorState
         body={getApiErrorMessage(billsQuery.error)}
@@ -111,91 +90,149 @@ export function BillsSegment() {
         title="Bills unavailable"
       />
     );
-  }
-
-  if (!bills.length) {
+  if (!bills.length)
     return (
       <EmptyState
-        body="Add the bills you pay on a schedule and they will show up here, with what they cost you in a typical month."
+        body="Add a bill and it will appear here, grouped by how often you pay it."
         title="No bills yet"
       />
     );
-  }
-
   return (
     <>
       <SurfaceCard style={styles.summary}>
         <View style={styles.summaryHeader}>
-          <Text style={styles.summaryTitle}>
-            {`${formatInteger(regularBills.length)} ${regularBills.length === 1 ? "bill" : "bills"} · ${formatCurrency(monthly)} a month`}
-          </Text>
+          <View style={styles.summaryCopy}>
+            <Text
+              style={activeCount ? styles.summaryValue : styles.summaryTitle}
+            >
+              {activeCount
+                ? money(monthly)
+                : recurring.length
+                  ? "No active recurring bills"
+                  : "No recurring bills"}
+            </Text>
+            <View style={styles.summaryCaption}>
+              {activeCount ? (
+                <Text style={styles.summaryLabel}>
+                  {excluded ? "Known monthly equivalent" : "Monthly equivalent"}
+                </Text>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="About monthly equivalent"
+                onPress={() =>
+                  Alert.alert(
+                    "Monthly equivalent",
+                    "Enabled recurring bills averaged per month, including yearly bills divided by 12. One-time bills and paused bills are excluded. This is an average, not the amount due this month. What’s due next lives on Home.",
+                  )
+                }
+                style={styles.infoButton}
+              >
+                <Text style={styles.infoGlyph}>ⓘ</Text>
+              </Pressable>
+            </View>
+          </View>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Sort bills"
             hitSlop={10}
-            onPress={() => {
-              setSortOpen(true);
-            }}
+            onPress={() => setSortOpen(true)}
             style={({ pressed }) => (pressed ? styles.sortPressed : null)}
           >
             <Text style={styles.sort}>Sort</Text>
           </Pressable>
         </View>
-        <Text style={styles.summaryBody}>
-          This is the list of bills you owe every month. What&apos;s due next
-          lives on Home.
-        </Text>
-      </SurfaceCard>
-
-      <View style={styles.rows}>
-        {rows.map((bill) => (
-          <EntityRow
-            key={String(bill.id)}
-            dimmed={!bill.is_active}
-            initial={initialOf(bill.name)}
-            onPress={() => {
-              router.push(`/bills/${bill.id}`);
-            }}
-            subtitle={`${categoryName(bill)} · ${billCadenceLabel(bill)}${bill.is_active ? "" : " · paused"}`}
-            tint={avatarTint(bill.bill_category?.color)}
-            title={bill.name}
-            value={formatCurrency(bill.amount)}
-          />
-        ))}
-      </View>
-
-      {plannedExpenses.length ? (
-        <View style={styles.plannedSection}>
-          <View style={styles.plannedHeader}>
-            <Text style={styles.plannedTitle}>Planned purchases</Text>
-            <Text style={styles.plannedCount}>
-              {formatInteger(plannedExpenses.length)}
-            </Text>
-          </View>
-          <Text style={styles.plannedBody}>
-            One-time purchases you checked before adding them to the plan.
+        {excluded ? (
+          <Text style={styles.summaryBody}>
+            {excluded}{" "}
+            {excluded === 1
+              ? "bill has an unrecognised schedule and is"
+              : "bills have unrecognised schedules and are"}{" "}
+            excluded from this estimate.
           </Text>
-          <View style={styles.rows}>
-            {plannedExpenses.map((bill) => (
-              <EntityRow
-                key={String(bill.id)}
-                dimmed={!bill.is_active}
-                initial={initialOf(bill.name)}
-                onPress={() => {
-                  router.push(`/bills/${bill.id}`);
-                }}
-                subtitle={`Planned for ${formatDate(bill.start_date)}${bill.is_active ? "" : " · paused"}`}
-                tint={theme.colors.primarySoft}
-                title={bill.name}
-                value={formatCurrency(bill.amount)}
-              />
-            ))}
+        ) : null}
+      </SurfaceCard>
+      {groups.map((group) => {
+        const expanded = !collapsed.has(group.key);
+        const count = `${group.activeCount} active${group.pausedCount ? ` · ${group.pausedCount} paused` : ""}`;
+        const total = !group.activeCount
+          ? "No active bills"
+          : group.key === "monthly"
+            ? `${money(group.total)}/month`
+            : group.key === "yearly"
+              ? `${money(group.total)}/year`
+              : group.key === "other"
+                ? `Average ${money(group.monthly)}/month`
+                : group.key === "unknown"
+                  ? "Monthly equivalent unavailable"
+                  : `${money(group.total)} total`;
+        return (
+          <View key={group.key} style={styles.plannedSection}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded }}
+              accessibilityLabel={`${group.title}, ${count}, ${total}`}
+              accessibilityHint="Show or hide bills in this section"
+              onPress={() =>
+                setCollapsed((current) => {
+                  const next = new Set(current);
+                  if (next.has(group.key)) next.delete(group.key);
+                  else next.add(group.key);
+                  return next;
+                })
+              }
+              style={styles.sectionButton}
+            >
+              <View style={styles.sectionHeading}>
+                <View
+                  style={[
+                    styles.headingContent,
+                    largeLayout && styles.headingStacked,
+                  ]}
+                >
+                  <Text accessibilityRole="header" style={styles.plannedTitle}>
+                    {group.title}
+                  </Text>
+                  {group.key !== "planned" ? (
+                    <Text style={styles.sectionTotal}>{total}</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.chevron}>{expanded ? "−" : "+"}</Text>
+              </View>
+              <Text style={styles.plannedCount}>{count}</Text>
+              {group.key === "yearly" && group.activeCount > 0 ? (
+                <Text style={styles.plannedBody}>
+                  Equivalent to {money(group.monthly)}/month
+                </Text>
+              ) : null}
+            </Pressable>
+            {group.key === "planned" ? (
+              <Text style={styles.plannedBody}>
+                One-time purchases you checked before adding them to the plan.
+              </Text>
+            ) : null}
+            {expanded ? (
+              <View style={styles.rows}>
+                {group.rows.map((bill) => (
+                  <EntityRow
+                    key={String(bill.id)}
+                    adaptive
+                    dimmed={!bill.is_active}
+                    initial={initialOf(bill.name)}
+                    title={bill.name}
+                    value={money(bill.amount)}
+                    subtitle={`${billListScheduleLabel(bill)}${bill.is_active ? "" : " · Paused"}\n${categoryName(bill)}`}
+                    tint={avatarTint(bill.bill_category?.color)}
+                    onPress={() => router.push(`/bills/${bill.id}`)}
+                  />
+                ))}
+              </View>
+            ) : null}
           </View>
-        </View>
-      ) : null}
-
+        );
+      })}
       <ActionSheet
-        onClose={() => {
-          setSortOpen(false);
-        }}
+        onClose={() => setSortOpen(false)}
         onSelect={setSort}
         options={SORT_OPTIONS}
         title="Sort bills by"
@@ -207,12 +244,55 @@ export function BillsSegment() {
 }
 
 const styles = StyleSheet.create({
+  summaryCopy: { flex: 1 },
+  summaryValue: {
+    color: theme.colors.ink,
+    fontSize: 34,
+    fontWeight: "800",
+    letterSpacing: -1,
+    fontVariant: ["tabular-nums"],
+  },
+  summaryCaption: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  summaryLabel: { color: theme.colors.muted, fontSize: 14, flexShrink: 1 },
+  infoButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoGlyph: { color: theme.colors.primaryStrong, fontSize: 19 },
+  sectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+  headingContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: theme.spacing.xs,
+  },
+  headingStacked: { flexDirection: "column", alignItems: "flex-start" },
+  sectionTotal: {
+    color: theme.colors.ink,
+    fontSize: 14,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+  },
+  chevron: { color: theme.colors.primaryStrong, fontSize: 20 },
+  sectionButton: { gap: theme.spacing.xs, paddingVertical: theme.spacing.sm },
   summary: {
     gap: theme.spacing.sm,
   },
   summaryHeader: {
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: theme.spacing.sm,
   },
@@ -242,19 +322,14 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
   },
-  plannedHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   plannedTitle: {
     color: theme.colors.ink,
     ...theme.typography.cardTitle,
   },
   plannedCount: {
-    color: theme.colors.primaryStrong,
-    fontSize: 14,
-    fontWeight: "800",
+    color: theme.colors.muted,
+    fontSize: 13,
+    fontWeight: "500",
   },
   plannedBody: {
     color: theme.colors.muted,
