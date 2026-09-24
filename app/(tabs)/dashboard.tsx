@@ -178,6 +178,15 @@ export default function DashboardScreen() {
               state={heroState}
             />
 
+            {heroState.kind === "ready" ? (
+              <SecondaryButton
+                size="sm"
+                icon="chart-timeline-variant"
+                label="View timeline"
+                onPress={() => router.push("/calendar?view=timeline")}
+              />
+            ) : null}
+
             {bothCriticalSectionsClear ? (
               <SurfaceCard tone="accent">
                 <SectionTitle
@@ -188,7 +197,7 @@ export default function DashboardScreen() {
                   icon="calendar-month-outline"
                   label="Open calendar"
                   onPress={() => {
-                    router.push("/calendar");
+                    router.push("/calendar?view=calendar");
                   }}
                 />
               </SurfaceCard>

@@ -68,3 +68,9 @@ export const purchasePlannerCushionStorage = {
     SecureStore.setItemAsync(PURCHASE_PLANNER_CUSHION_KEY, value),
   clear: () => SecureStore.deleteItemAsync(PURCHASE_PLANNER_CUSHION_KEY),
 };
+
+export const calendarViewStorage = {
+  get: () => SecureStore.getItemAsync("paydayplanners.calendar_view"),
+  set: (value: "timeline" | "calendar") =>
+    SecureStore.setItemAsync("paydayplanners.calendar_view", value),
+};
