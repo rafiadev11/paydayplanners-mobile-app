@@ -90,7 +90,14 @@ npm run ota:all
 
 ## Quality gates
 
+`npm test` runs the portable TypeScript unit suite. The native calendar layout
+regression compiles the Yoga sources bundled with React Native and requires a
+`c++` compiler supporting C++20 (Xcode Command Line Tools on macOS, or GCC/Clang
+on Linux). CI runs both suites; neither needs additional npm dependencies.
+
 ```bash
+npm test
+npm run test:calendar-layout
 npm run lint
 npm run typecheck
 npm run expo:config:check

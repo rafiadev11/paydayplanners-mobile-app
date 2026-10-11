@@ -50,6 +50,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Native calendar layout regression
+        run: npm run test:calendar-layout
+
       - name: Typecheck
         run: npm run typecheck
 
