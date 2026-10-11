@@ -100,3 +100,12 @@ export function monthGridDays(monthKey: string) {
 
   return cells;
 }
+
+/** Six explicit Sunday-first weeks keep layout independent of cell rounding. */
+export function monthGridWeeks(monthKey: string) {
+  const cells = monthGridDays(monthKey);
+
+  return Array.from({ length: DAYS_IN_GRID / 7 }, (_, week) =>
+    cells.slice(week * 7, (week + 1) * 7),
+  );
+}

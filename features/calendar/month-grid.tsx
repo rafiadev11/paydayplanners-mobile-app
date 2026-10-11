@@ -7,7 +7,11 @@ import {
   type CalendarDay,
   type CalendarDayMap,
 } from "@features/calendar/calendar-data";
-import { monthGridDays, monthKeyOf, monthLabel } from "@shared/lib/month";
+import { monthGridWeeks, monthKeyOf, monthLabel } from "@shared/lib/month";
+import {
+  calendarColumnStyle,
+  calendarRowStyle,
+} from "@features/calendar/month-grid-layout";
 import { theme, withAlpha } from "@shared/ui/theme";
 
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -124,7 +128,7 @@ export function MonthGrid({
   onSelectDate,
   onJumpToToday,
 }: MonthGridProps) {
-  const cells = useMemo(() => monthGridDays(monthKey), [monthKey]);
+  const weeks = useMemo(() => monthGridWeeks(monthKey), [monthKey]);
   const showTodayChip = monthKey !== monthKeyOf(today);
 
   return (
@@ -199,7 +203,7 @@ export function MonthGrid({
         </View>
       ) : null}
 
-      <View style={styles.weekdayRow}>
+      <View style={calendarRowStyle}>
         {WEEKDAY_LABELS.map((label, index) => (
           <View key={`${label}-${index}`} style={styles.weekdayCell}>
             <Text style={styles.weekdayLabel}>{label}</Text>
@@ -207,17 +211,21 @@ export function MonthGrid({
         ))}
       </View>
 
-      <View style={styles.grid}>
-        {cells.map((cell) => (
-          <DayCell
-            date={cell.date}
-            day={days.get(cell.date)}
-            inMonth={cell.inMonth}
-            isSelected={cell.date === selectedDate}
-            isToday={cell.date === today}
-            key={cell.date}
-            onSelect={onSelectDate}
-          />
+      <View>
+        {weeks.map((week) => (
+          <View key={week[0].date} style={calendarRowStyle}>
+            {week.map((cell) => (
+              <DayCell
+                date={cell.date}
+                day={days.get(cell.date)}
+                inMonth={cell.inMonth}
+                isSelected={cell.date === selectedDate}
+                isToday={cell.date === today}
+                key={cell.date}
+                onSelect={onSelectDate}
+              />
+            ))}
+          </View>
         ))}
       </View>
 
@@ -284,11 +292,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
-  weekdayRow: {
-    flexDirection: "row",
-  },
   weekdayCell: {
-    width: `${100 / 7}%`,
+    ...calendarColumnStyle,
     alignItems: "center",
     paddingBottom: 2,
   },
@@ -298,12 +303,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
   },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
   cell: {
-    width: `${100 / 7}%`,
+    ...calendarColumnStyle,
     minHeight: 52,
     alignItems: "center",
     justifyContent: "flex-start",

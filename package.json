@@ -36,7 +36,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "expo:config:check": "npx expo config --json > /dev/null",
-    "test": "tsx --test shared/lib/*.test.ts"
+    "test": "tsx --test shared/lib/*.test.ts",
+    "test:calendar-layout": "tsx --test shared/lib/month-grid.native-test.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.6",
