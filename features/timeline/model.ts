@@ -1,8 +1,10 @@
 import type {
   BillOccurrence,
+  DashboardResponse,
   ForecastPaycheck,
   ForecastResponse,
 } from "@features/planning/api";
+import { currentPlanSummary } from "@features/planning/funding";
 import { addDaysToIsoDate } from "@shared/lib/timezone";
 
 // Aggregate in cents so combining income sources never introduces rounding drift.
@@ -16,12 +18,18 @@ export type TimelinePayday = {
   billsTotal: number;
   savings: number;
   remaining: number;
+  paydayRemaining: number;
+  carriedRemaining: number;
   sources: ForecastPaycheck[];
   bills: TimelineBill[];
   goals: { id: string; name: string; amount: number }[];
 };
 
-export function buildTimeline(forecast: ForecastResponse, today: string) {
+export function buildTimeline(
+  forecast: ForecastResponse,
+  today: string,
+  dashboard?: DashboardResponse,
+) {
   const end = addDaysToIsoDate(today, 90);
   const grouped = new Map<string, ForecastPaycheck[]>();
   for (const paycheck of forecast.paychecks) {
@@ -76,6 +84,9 @@ export function buildTimeline(forecast: ForecastResponse, today: string) {
           100,
         remaining:
           sources.reduce((sum, p) => sum + cents(p.remaining_amount), 0) / 100,
+        paydayRemaining:
+          sources.reduce((sum, p) => sum + cents(p.remaining_amount), 0) / 100,
+        carriedRemaining: 0,
         bills: [...bills.values()]
           .sort(
             (a, b) =>
@@ -89,6 +100,35 @@ export function buildTimeline(forecast: ForecastResponse, today: string) {
         })),
       };
     });
+  const currentPlan = dashboard ? currentPlanSummary(dashboard) : null;
+  const first = paydays[0];
+  const nextPaydayDate =
+    dashboard?.next_payday?.occurrence_date ??
+    dashboard?.next_paycheck?.occurrence_date;
+  const currentSourceIds = new Set(
+    currentPlan?.sources.map((source) => String(source.id)),
+  );
+  const carriesPlan = Boolean(
+    currentPlan &&
+    first &&
+    (nextPaydayDate === first.date ||
+      (!nextPaydayDate &&
+        first.sources.every((source) =>
+          currentSourceIds.has(String(source.id)),
+        ))),
+  );
+  if (currentPlan && first && carriesPlan) {
+    // The current plan already includes the first payday. Seed its ending
+    // balance once, then carry each ending balance into the next payday.
+    let carriedCents =
+      cents(currentPlan.remaining_amount) -
+      Math.round(first.paydayRemaining * 100);
+    for (const payday of paydays) {
+      payday.carriedRemaining = carriedCents / 100;
+      carriedCents += Math.round(payday.paydayRemaining * 100);
+      payday.remaining = carriedCents / 100;
+    }
+  }
   // A projected occurrence does not automatically become "overdue" on the
   // server. Keep every unpaid funding gap returned in the forecast, including
   // past due dates, until it is funded, paid, or skipped.
@@ -111,7 +151,13 @@ export function buildTimeline(forecast: ForecastResponse, today: string) {
             !bill.allocations?.length)),
     )
     .sort((a, b) => a.due_date.localeCompare(b.due_date));
-  return { paydays, uncovered, end };
+  return {
+    paydays,
+    uncovered,
+    end,
+    currentPlan,
+    carriesPlan,
+  };
 }
 
 export function selectedPaydayIndex(

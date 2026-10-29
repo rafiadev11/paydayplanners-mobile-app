@@ -17,7 +17,10 @@ import {
 import { DayDetail } from "@features/calendar/day-detail";
 import { MonthGrid } from "@features/calendar/month-grid";
 import { MonthSummaryCard } from "@features/calendar/month-summary-card";
-import { useForecastWindowQuery } from "@features/planning/queries";
+import {
+  useDashboardQuery,
+  useForecastWindowQuery,
+} from "@features/planning/queries";
 import { forecastWindowForMonth } from "@features/planning/window";
 import { usePlanningRevision } from "@shared/api/planning-revision";
 import { useRefetchStaleOnFocus } from "@shared/api/use-refetch-stale-on-focus";
@@ -135,7 +138,10 @@ export default function CalendarScreen() {
   );
 
   const forecastQuery = useForecastWindowQuery(scope, forecastWindow);
-  useRefetchStaleOnFocus(forecastQuery);
+  const dashboardQuery = useDashboardQuery(scope, {
+    enabled: view === "timeline",
+  });
+  useRefetchStaleOnFocus(forecastQuery, dashboardQuery);
 
   const forecast = forecastQuery.data;
 
@@ -196,21 +202,31 @@ export default function CalendarScreen() {
 
   const refresh = useCallback(() => {
     void forecastQuery.refetch();
-  }, [forecastQuery]);
+    if (view === "timeline") void dashboardQuery.refetch();
+  }, [forecastQuery, dashboardQuery, view]);
 
-  const loading = forecastQuery.isPending && !forecast;
-  const refreshing = forecastQuery.isRefetching && !forecastQuery.isPending;
+  const loading =
+    (forecastQuery.isPending && !forecast) ||
+    (view === "timeline" && dashboardQuery.isPending && !dashboardQuery.data);
+  const refreshing =
+    (forecastQuery.isRefetching && !forecastQuery.isPending) ||
+    (view === "timeline" &&
+      dashboardQuery.isRefetching &&
+      !dashboardQuery.isPending);
   /**
    * Stepping into the past moves the window, and `keepPreviousData` holds the
    * old forecast on screen — which has no data for the month now being shown.
    * Fade it while the new window lands rather than implying the month is empty.
    */
-  const settling = forecastQuery.isPlaceholderData;
+  const settling =
+    forecastQuery.isPlaceholderData ||
+    (view === "timeline" && dashboardQuery.isPlaceholderData);
   // A paused request can retain another month's forecast as placeholder data.
   // Never present that data as the current timeline, even while offline.
   const timelineWaitingForConnection =
     view === "timeline" &&
-    forecastQuery.fetchStatus === "paused" &&
+    (forecastQuery.fetchStatus === "paused" ||
+      dashboardQuery.fetchStatus === "paused") &&
     (loading || settling);
 
   return (
@@ -249,9 +265,10 @@ export default function CalendarScreen() {
         />
       ) : loading || !viewReady ? (
         <LoadingState label="Loading your calendar…" />
-      ) : forecastQuery.isError ? (
+      ) : forecastQuery.isError ||
+        (view === "timeline" && dashboardQuery.isError) ? (
         <ErrorState
-          body={getApiErrorMessage(forecastQuery.error)}
+          body={getApiErrorMessage(forecastQuery.error ?? dashboardQuery.error)}
           onRetry={refresh}
           title="We could not load your calendar"
         />
@@ -262,6 +279,7 @@ export default function CalendarScreen() {
           <MoneyTimeline
             key={String(user?.id)}
             forecast={forecast}
+            dashboard={dashboardQuery.data}
             today={today}
             selectedDate={timelineDate}
             onSelectDate={setTimelineDate}
