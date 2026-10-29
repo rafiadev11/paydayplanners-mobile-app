@@ -213,6 +213,10 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="savings-goals/activity"
+            options={{ title: "Savings goal", ...modalOptions }}
+          />
+          <Stack.Screen
             name="savings-goals/[id]"
             options={{
               title: "Edit Savings Goal",

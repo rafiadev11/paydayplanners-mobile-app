@@ -241,6 +241,8 @@ export function StatusBadge({ label, tone = "neutral" }: StatusBadgeProps) {
 export function PrimaryButton({ label, onPress, disabled, icon }: ButtonProps) {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
@@ -272,6 +274,8 @@ export function SecondaryButton({
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [

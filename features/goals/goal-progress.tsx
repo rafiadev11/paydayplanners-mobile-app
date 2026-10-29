@@ -1,7 +1,11 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { type SavingsGoal } from "@features/planning/api";
-import { formatCurrency, formatMonthYear } from "@shared/lib/format";
+import {
+  formatCurrency,
+  formatCurrencyPrecise,
+  formatMonthYear,
+} from "@shared/lib/format";
 import { addDaysToIsoDate } from "@shared/lib/timezone";
 import { theme, withAlpha } from "@shared/ui/theme";
 
@@ -113,8 +117,8 @@ export function goalPace(goal: SavingsGoal, context: GoalPaceContext) {
   const projected = projectedCompletion(goal, context);
 
   return projected
-    ? `${perPaydayLabel} set aside each payday · on track for ${formatMonthYear(projected)}`
-    : `${perPaydayLabel} set aside each payday`;
+    ? `${perPaydayLabel} planned each payday · estimated for ${formatMonthYear(projected)}`
+    : `${perPaydayLabel} planned each payday`;
 }
 
 /** Name, saved-of-target, progress bar, and pace line — the goal in four lines. */
@@ -132,7 +136,7 @@ export function GoalProgressBlock({
       <View style={styles.goalHeader}>
         <Text style={styles.goalName}>{goal.name}</Text>
         <Text style={styles.goalAmount}>
-          {`${formatCurrency(goal.saved_amount)} of ${formatCurrency(goal.target_amount)}`}
+          {`${formatCurrencyPrecise(goal.saved_amount)} of ${formatCurrencyPrecise(goal.target_amount)}`}
         </Text>
       </View>
 
@@ -156,18 +160,22 @@ const styles = StyleSheet.create({
   },
   goalHeader: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "baseline",
     justifyContent: "space-between",
     gap: theme.spacing.sm,
   },
   goalName: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 140,
     color: theme.colors.text,
     fontSize: 18,
     fontWeight: "800",
     letterSpacing: -0.3,
   },
   goalAmount: {
+    flexShrink: 1,
     color: theme.colors.muted,
     fontSize: 17,
     fontWeight: "800",

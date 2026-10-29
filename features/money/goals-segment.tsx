@@ -17,6 +17,7 @@ import {
   ErrorState,
   LoadingState,
   SurfaceCard,
+  SecondaryButton,
 } from "@shared/ui/primitives";
 import { theme } from "@shared/ui/theme";
 
@@ -99,21 +100,30 @@ export function GoalsSegment() {
   return (
     <View style={styles.rows}>
       {rows.map((goal) => (
-        <Pressable
-          accessibilityRole="button"
-          key={String(goal.id)}
-          onPress={() => {
-            router.push(`/savings-goals/${goal.id}`);
-          }}
-          style={({ pressed }) => [
-            goal.is_active ? null : styles.cardDimmed,
-            pressed ? styles.cardPressed : null,
-          ]}
-        >
-          <SurfaceCard>
+        <SurfaceCard key={String(goal.id)}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              router.push(`/savings-goals/activity?id=${goal.id}`);
+            }}
+            style={({ pressed }) => [
+              goal.is_active ? null : styles.cardDimmed,
+              pressed ? styles.cardPressed : null,
+            ]}
+          >
             <GoalProgressBlock context={context} goal={goal} />
-          </SurfaceCard>
-        </Pressable>
+          </Pressable>
+          <SecondaryButton
+            label="View savings"
+            onPress={() => router.push(`/savings-goals/activity?id=${goal.id}`)}
+          />
+          <SecondaryButton
+            label="Add savings"
+            onPress={() =>
+              router.push(`/savings-goals/activity?id=${goal.id}&add=1`)
+            }
+          />
+        </SurfaceCard>
       ))}
     </View>
   );

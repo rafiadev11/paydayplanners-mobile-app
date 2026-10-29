@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { GoalProgressBlock } from "@features/goals/goal-progress";
@@ -14,6 +15,7 @@ export function SavingTowardCard({
   dashboard: DashboardResponse;
   onOpenGoals: () => void;
 }) {
+  const router = useRouter();
   const goals = dashboard.savings_goals.slice(0, VISIBLE_GOAL_COUNT);
 
   if (!goals.length) {
@@ -40,11 +42,15 @@ export function SavingTowardCard({
 
       <SurfaceCard style={styles.card}>
         {goals.map((goal) => (
-          <GoalProgressBlock
-            context={context}
-            goal={goal}
+          <Pressable
             key={String(goal.id)}
-          />
+            accessibilityRole="button"
+            accessibilityLabel={`${goal.name}, view savings and record contributions`}
+            onPress={() => router.push(`/savings-goals/activity?id=${goal.id}`)}
+          >
+            <GoalProgressBlock context={context} goal={goal} />
+            <Text style={styles.link}>View savings →</Text>
+          </Pressable>
         ))}
       </SurfaceCard>
     </View>

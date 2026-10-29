@@ -84,7 +84,6 @@ export default function EditSavingsGoalScreen() {
 
   const submit = async () => {
     const normalizedTargetAmount = parseCurrencyInput(targetAmount, 0.01);
-    const normalizedSavedAmount = parseCurrencyInput(savedAmount || "0", 0);
     const normalizedContributionAmount = parseCurrencyInput(
       contributionAmount,
       0.01,
@@ -124,7 +123,7 @@ export default function EditSavingsGoalScreen() {
       await updateSavingsGoal(id, {
         name: name.trim(),
         target_amount: normalizedTargetAmount,
-        saved_amount: normalizedSavedAmount ?? "0.00",
+
         contribution_amount: normalizedTargetDate
           ? null
           : (normalizedContributionAmount ?? null),
@@ -178,7 +177,7 @@ export default function EditSavingsGoalScreen() {
       >
         <SurfaceCard tone="accent">
           <SectionTitle
-            subtitle="Change the target, saved progress, or target date here."
+            subtitle="Change your target and savings plan here."
             title="Edit savings goal"
           />
           <Text style={styles.previewValue}>
@@ -203,12 +202,10 @@ export default function EditSavingsGoalScreen() {
             placeholder="$2,000.00"
             value={targetAmount}
           />
-          <CurrencyField
-            label="Already saved"
-            onChangeText={setSavedAmount}
-            placeholder="$0.00"
-            value={savedAmount}
-          />
+          <Text style={styles.helperCopy}>
+            Saved so far: {formatCurrency(savedAmount)}. Record contributions
+            from the savings history screen.
+          </Text>
           <DatePickerField
             label="Start date"
             onChange={setStartDate}

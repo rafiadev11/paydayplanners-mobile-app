@@ -641,3 +641,42 @@ export async function updateSavingsGoal(
 
   return item(data);
 }
+
+export type SavingsContribution = {
+  id: number;
+  amount: string;
+  saved_on: string;
+  paycheck_occurrence_id: number | null;
+  note: string | null;
+};
+export async function fetchSavingsContributions(id: string | number) {
+  const { data } = await api.get<CollectionEnvelope<SavingsContribution>>(
+    `/api/v1/savings-goals/${id}/contributions`,
+  );
+  return collection(data);
+}
+export async function recordSavingsContribution(
+  id: string | number,
+  input: {
+    request_id: string;
+    amount: string;
+    saved_on: string;
+    note?: string;
+    paycheck_occurrence_id?: string | number;
+  },
+) {
+  const { data } = await api.post<ItemEnvelope<SavingsGoal>>(
+    `/api/v1/savings-goals/${id}/contributions`,
+    input,
+  );
+  return item(data);
+}
+export async function undoSavingsContribution(
+  id: string | number,
+  contribution: number,
+) {
+  const { data } = await api.delete<ItemEnvelope<SavingsGoal>>(
+    `/api/v1/savings-goals/${id}/contributions/${contribution}`,
+  );
+  return item(data);
+}
