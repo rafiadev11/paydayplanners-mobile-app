@@ -20,6 +20,7 @@ import {
   type SavingsGoal,
   type SavingsContribution,
 } from "@features/planning/api";
+import { savingsPaydays } from "@features/goals/savings-paydays";
 import { GoalProgressBlock } from "@features/goals/goal-progress";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
@@ -47,6 +48,7 @@ export default function SavingsActivityScreen() {
   const router = useRouter();
   const [goal, setGoal] = useState<SavingsGoal | null>(null);
   const [history, setHistory] = useState<SavingsContribution[]>([]);
+  const [visiblePaydays, setVisiblePaydays] = useState(6);
   const [planned, setPlanned] = useState<Planned[]>([]);
   const [form, setForm] = useState<{
     paycheck?: Planned;
@@ -76,10 +78,14 @@ export default function SavingsActivityScreen() {
         fetchDashboard().catch(() => null),
       ]);
       setGoal(nextGoal);
-      setHistory(entries);
+      setHistory(entries.entries);
       setPlanned(
-        dashboard?.savings_goals.find((g) => String(g.id) === id)
-          ?.contributions ?? [],
+        savingsPaydays(
+          entries.recentPaychecks,
+          dashboard?.savings_goals.find((g) => String(g.id) === id)
+            ?.contributions ?? [],
+          entries.entries,
+        ),
       );
       setError(
         dashboard
@@ -254,16 +260,21 @@ export default function SavingsActivityScreen() {
           <SurfaceCard>
             <SectionTitle
               title="Payday savings"
-              subtitle="Planned amounts count toward your goal only after you mark them saved."
+              subtitle="Includes recent paydays from the last three months. Amounts count toward your goal only after you mark them saved."
             />
-            {outstanding.slice(0, 6).map((p) => (
+            {outstanding.slice(0, visiblePaydays).map((p) => (
               <View key={String(p.paycheck_occurrence_id)} style={styles.row}>
                 <View style={styles.rowText}>
                   <Text style={styles.label}>
-                    {formatCurrencyPrecise(p.amount)}
+                    {p.amount
+                      ? formatCurrencyPrecise(p.amount)
+                      : "Enter amount saved"}
                   </Text>
                   <Text style={styles.body}>
-                    {formatDate(p.occurrence_date)} paycheck · Planned
+                    {formatDate(p.occurrence_date)} paycheck ·{" "}
+                    {p.occurrence_date < todayInAppTimezone()
+                      ? "Not recorded"
+                      : "Planned"}
                   </Text>
                 </View>
                 <SecondaryButton
@@ -273,6 +284,12 @@ export default function SavingsActivityScreen() {
                 />
               </View>
             ))}
+            {outstanding.length > visiblePaydays && (
+              <SecondaryButton
+                label="Show more paydays"
+                onPress={() => setVisiblePaydays((count) => count + 6)}
+              />
+            )}
             {!outstanding.length && (
               <Text style={styles.body}>
                 {goal.is_completed

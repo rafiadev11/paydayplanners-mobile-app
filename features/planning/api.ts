@@ -650,10 +650,15 @@ export type SavingsContribution = {
   note: string | null;
 };
 export async function fetchSavingsContributions(id: string | number) {
-  const { data } = await api.get<CollectionEnvelope<SavingsContribution>>(
-    `/api/v1/savings-goals/${id}/contributions`,
-  );
-  return collection(data);
+  const { data } = await api.get<
+    CollectionEnvelope<SavingsContribution> & {
+      recent_paychecks?: NonNullable<SavingsGoal["contributions"]>;
+    }
+  >(`/api/v1/savings-goals/${id}/contributions`);
+  return {
+    entries: collection(data),
+    recentPaychecks: data.recent_paychecks ?? [],
+  };
 }
 export async function recordSavingsContribution(
   id: string | number,
