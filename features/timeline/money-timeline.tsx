@@ -13,7 +13,12 @@ import {
 } from "react-native";
 
 import { useAuth } from "@features/auth/auth-context";
-import type { BillOccurrence, ForecastResponse } from "@features/planning/api";
+import type {
+  BillOccurrence,
+  DashboardResponse,
+  ForecastResponse,
+} from "@features/planning/api";
+import { planBalanceLabel } from "@features/planning/funding";
 import { buildTimeline, selectedPaydayIndex } from "@features/timeline/model";
 import {
   formatCurrencyPrecise,
@@ -69,20 +74,22 @@ function TimelineRow({
 
 export function MoneyTimeline({
   forecast,
+  dashboard,
   today,
   selectedDate,
   onSelectDate,
 }: {
   forecast: ForecastResponse;
+  dashboard?: DashboardResponse;
   today: string;
   selectedDate: string | null;
   onSelectDate: (date: string) => void;
 }) {
   const router = useRouter();
   const { user } = useAuth();
-  const { paydays, uncovered, end } = useMemo(
-    () => buildTimeline(forecast, today),
-    [forecast, today],
+  const { paydays, uncovered, end, currentPlan, carriesPlan } = useMemo(
+    () => buildTimeline(forecast, today, dashboard),
+    [forecast, today, dashboard],
   );
   const [showExplanation, setShowExplanation] = useState(false);
   const [showUncovered, setShowUncovered] = useState(false);
@@ -207,9 +214,58 @@ export function MoneyTimeline({
     </SurfaceCard>
   ) : null;
 
+  const currentPlanPanel = currentPlan ? (
+    <SurfaceCard tone="dark" style={styles.hero}>
+      <Text style={styles.heroDate}>YOUR CURRENT PLAN</Text>
+      <View
+        accessible
+        accessibilityLiveRegion="polite"
+        accessibilityLabel={`${money(Math.abs(Number(currentPlan.remaining_amount)))} ${planBalanceLabel(Number(currentPlan.remaining_amount))}`}
+      >
+        <Text
+          style={[
+            styles.amount,
+            Number(currentPlan.remaining_amount) < 0 && styles.shortAmount,
+          ]}
+        >
+          {money(Math.abs(Number(currentPlan.remaining_amount)))}
+        </Text>
+        <Text style={styles.caption}>
+          {planBalanceLabel(Number(currentPlan.remaining_amount))}
+        </Text>
+      </View>
+      <Text style={[styles.explanation, { marginTop: 16 }]}>
+        Includes the income sources in your current plan, including earlier
+        paydays. This is a plan, not your bank balance.
+      </Text>
+      {currentPlan.sources.map((source) => (
+        <Text key={String(source.id)} style={styles.explanation}>
+          {source.name ?? "Income"}
+          {source.occurrence_date
+            ? ` (${formatWeekdayDate(source.occurrence_date)})`
+            : ""}
+          : {money(Number(source.effective_amount))}
+        </Text>
+      ))}
+      <View style={styles.breakdown}>
+        {[
+          ["Income", currentPlan.effective_amount],
+          ["Bills", currentPlan.assigned_total],
+          ["Savings", currentPlan.savings_goal_total],
+        ].map(([label, value]) => (
+          <View key={label} style={styles.metric}>
+            <Text style={styles.metricLabel}>{label}</Text>
+            <Text style={styles.metricValue}>{money(Number(value))}</Text>
+          </View>
+        ))}
+      </View>
+    </SurfaceCard>
+  ) : null;
+
   if (!payday)
     return (
       <View style={styles.content}>
+        {currentPlanPanel}
         <EmptyState
           title="Your next payday starts the picture"
           body={`No income is scheduled between today and ${formatDate(end)}. Add a payday to see how your bills and savings fit around it.`}
@@ -224,71 +280,9 @@ export function MoneyTimeline({
     );
 
   const short = payday.remaining < 0;
-  const shortSources = payday.sources.filter(
-    (source) => Number(source.remaining_amount) < 0,
-  );
   return (
     <View style={styles.content}>
-      <Animated.View
-        style={{ transform: [{ translateX: shift }] }}
-        {...pan.panHandlers}
-      >
-        <SurfaceCard tone="dark" style={styles.hero}>
-          <View style={styles.heroHeading}>
-            <Text style={styles.heroDate}>
-              {formatLongWeekdayDate(payday.date)}
-            </Text>
-            {index === 0 ? <Text style={styles.nextTag}>NEXT</Text> : null}
-          </View>
-          <View
-            accessibilityLiveRegion="polite"
-            accessible
-            accessibilityLabel={`${formatWeekdayDate(payday.date)}, ${money(Math.abs(payday.remaining))} ${short ? "short in this plan" : "planned remaining"}`}
-          >
-            <Text style={[styles.amount, short && styles.shortAmount]}>
-              {money(Math.abs(payday.remaining))}
-            </Text>
-            <View style={styles.captionRow}>
-              <Text style={styles.caption}>
-                {short ? "Short in this plan" : "Planned remaining"}
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: showExplanation }}
-            accessibilityLabel="How planned remaining is calculated"
-            onPress={() => setShowExplanation((value) => !value)}
-            style={styles.explanationButton}
-          >
-            <MaterialCommunityIcons
-              name="information-outline"
-              size={17}
-              color={theme.colors.backgroundStrong}
-            />
-            <Text style={styles.explanationLink}>How this is calculated</Text>
-          </Pressable>
-          {showExplanation ? (
-            <Text style={styles.explanation}>
-              Income minus bills and savings assigned to this payday. This is a
-              plan, not your bank balance. Money left on earlier paydays is not
-              added here.
-            </Text>
-          ) : null}
-          <View style={styles.breakdown}>
-            {[
-              ["Income", payday.income],
-              ["Bills", payday.billsTotal],
-              ["Savings", payday.savings],
-            ].map(([label, value]) => (
-              <View key={String(label)} style={styles.metric}>
-                <Text style={styles.metricLabel}>{label}</Text>
-                <Text style={styles.metricValue}>{money(Number(value))}</Text>
-              </View>
-            ))}
-          </View>
-        </SurfaceCard>
-      </Animated.View>
+      {currentPlanPanel}
 
       <View style={styles.sectionHeading}>
         <Text style={styles.sectionTitle}>Upcoming paydays</Text>
@@ -383,17 +377,82 @@ export function MoneyTimeline({
         </Text>
       )}
 
-      {short || shortSources.length ? (
+      <Animated.View
+        style={{ transform: [{ translateX: shift }] }}
+        {...pan.panHandlers}
+      >
+        <SurfaceCard tone="dark" style={styles.hero}>
+          <View style={styles.heroHeading}>
+            <Text style={styles.heroDate}>
+              {formatLongWeekdayDate(payday.date)}
+            </Text>
+            {index === 0 ? <Text style={styles.nextTag}>NEXT</Text> : null}
+          </View>
+          <View
+            accessibilityLiveRegion="polite"
+            accessible
+            accessibilityLabel={`${formatWeekdayDate(payday.date)}, ${money(Math.abs(payday.remaining))} ${short ? "short in the plan" : "planned remaining"}`}
+          >
+            <Text style={[styles.amount, short && styles.shortAmount]}>
+              {money(Math.abs(payday.remaining))}
+            </Text>
+            <View style={styles.captionRow}>
+              <Text style={styles.caption}>
+                {short ? "Short in the plan" : "Planned remaining"}
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showExplanation }}
+            accessibilityLabel="How this payday is calculated"
+            onPress={() => setShowExplanation((value) => !value)}
+            style={styles.explanationButton}
+          >
+            <MaterialCommunityIcons
+              name="information-outline"
+              size={17}
+              color={theme.colors.backgroundStrong}
+            />
+            <Text style={styles.explanationLink}>How this is calculated</Text>
+          </Pressable>
+          {showExplanation ? (
+            <Text style={styles.explanation}>
+              {carriesPlan
+                ? "Remaining from earlier plans, plus this payday’s income, minus its assigned bills and savings. The next payday starts from the same current plan shown on Home. Later paydays carry that planned remainder forward."
+                : "This payday’s income minus its assigned bills and savings."}
+              {
+                " This is a plan, not your bank balance. Everyday spending and bills still needing funding are not deducted."
+              }
+            </Text>
+          ) : null}
+          <View style={styles.breakdown}>
+            {[
+              ...(carriesPlan
+                ? [["Carried forward", payday.carriedRemaining]]
+                : []),
+              ["Income", payday.income],
+              ["Bills", payday.billsTotal],
+              ["Savings", payday.savings],
+            ].map(([label, value]) => (
+              <View key={String(label)} style={styles.metric}>
+                <Text style={styles.metricLabel}>{label}</Text>
+                <Text style={styles.metricValue}>{money(Number(value))}</Text>
+              </View>
+            ))}
+          </View>
+        </SurfaceCard>
+      </Animated.View>
+
+      {short ? (
         <SurfaceCard tone="warning">
           <Text style={styles.rowTitle}>
-            {short
-              ? `This plan is ${money(Math.abs(payday.remaining))} short.`
-              : "One income source is over-allocated."}
+            This plan is {money(Math.abs(payday.remaining))} short.
           </Text>
           <Text style={styles.body}>
-            {short
-              ? "Assigned bills and savings exceed this payday’s income. Review the items below."
-              : "The combined amount is positive, but an individual paycheck needs attention. Review the income breakdown below."}
+            {carriesPlan
+              ? "Assigned bills and savings exceed the planned money available, including the remainder carried forward. Review the items below."
+              : "Assigned bills and savings exceed this payday’s income. Review the items below."}
           </Text>
         </SurfaceCard>
       ) : null}
@@ -406,11 +465,7 @@ export function MoneyTimeline({
               <TimelineRow
                 key={String(source.id)}
                 title={source.pay_schedule?.name ?? "Income"}
-                subtitle={
-                  Number(source.remaining_amount) < 0
-                    ? `${money(Math.abs(Number(source.remaining_amount)))} short after allocations`
-                    : `${money(Number(source.remaining_amount))} remaining after allocations`
-                }
+                subtitle={`${money(Number(source.remaining_amount))} after this income’s allocations`}
                 amount={Number(source.effective_amount ?? source.amount)}
                 icon="cash-plus"
                 onPress={
@@ -428,7 +483,7 @@ export function MoneyTimeline({
       ) : null}
       <View style={styles.group}>
         <Text style={styles.sectionTitle}>
-          {short ? "What’s in this plan" : "What this payday covers"}
+          {short ? "What’s assigned to this payday" : "What this payday covers"}
         </Text>
         {payday.bills.length || payday.goals.length ? (
           <SurfaceCard style={styles.list}>

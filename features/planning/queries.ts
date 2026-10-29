@@ -62,9 +62,9 @@ function enabled(scope: PlanningScope, gate?: QueryGate) {
   return Boolean(scope.userId) && gate?.enabled !== false;
 }
 
-export function useDashboardQuery(scope: PlanningScope) {
+export function useDashboardQuery(scope: PlanningScope, gate?: QueryGate) {
   return useQuery({
-    enabled: enabled(scope),
+    enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
     queryFn: fetchDashboard,
     queryKey: planningKeys.dashboard(scope),
