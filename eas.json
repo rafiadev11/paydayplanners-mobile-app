@@ -34,6 +34,13 @@
       "android": {
         "buildType": "apk"
       }
+    },
+    "watch-production": {
+      "extends": "production",
+      "config": "watch-android.yml",
+      "android": {
+        "applicationArchivePath": "android/app/build/outputs/bundle/release/*.aab"
+      }
     }
   },
   "submit": {
@@ -43,6 +50,12 @@
       },
       "android": {
         "track": "internal"
+      }
+    },
+    "watch-production": {
+      "android": {
+        "track": "wear:internal",
+        "releaseStatus": "draft"
       }
     }
   }
