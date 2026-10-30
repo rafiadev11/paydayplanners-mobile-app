@@ -1,6 +1,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { withXcodeProject } = require("@expo/config-plugins");
+const {
+  configureWidgets,
+  WIDGET_TARGET,
+} = require("./payday-watch-widgets.cjs");
 const TARGET = "PaydayWatch";
 
 function configureProject(project, config, projectRoot, iosRoot) {
@@ -14,6 +18,11 @@ function configureProject(project, config, projectRoot, iosRoot) {
       { recursive: true },
     );
   }
+  fs.cpSync(
+    path.join(projectRoot, "watch/apple/Widgets"),
+    path.join(iosRoot, WIDGET_TARGET),
+    { recursive: true },
+  );
   const main = project.getFirstTarget();
   let target = Object.entries(project.pbxNativeTargetSection()).find(
     ([, value]) => value.name?.replaceAll('"', "") === TARGET,
@@ -98,6 +107,7 @@ function configureProject(project, config, projectRoot, iosRoot) {
     if (phone.DEVELOPMENT_TEAM)
       current.buildSettings.DEVELOPMENT_TEAM = phone.DEVELOPMENT_TEAM;
   }
+  configureWidgets(project, target[0], WIDGET_TARGET);
   return project;
 }
 
@@ -107,7 +117,7 @@ function withPaydayWatch(config) {
   const experimental = build.experimental || {};
   const ios = experimental.ios || {};
   const extensions = (ios.appExtensions || []).filter(
-    (x) => x.targetName !== TARGET,
+    (x) => ![TARGET, WIDGET_TARGET].includes(x.targetName),
   );
   config.extra = {
     ...config.extra,
@@ -124,6 +134,11 @@ function withPaydayWatch(config) {
               {
                 targetName: TARGET,
                 bundleIdentifier: `${config.ios.bundleIdentifier}.watchkitapp`,
+                entitlements: {},
+              },
+              {
+                targetName: WIDGET_TARGET,
+                bundleIdentifier: `${config.ios.bundleIdentifier}.watchkitapp.widgets`,
                 entitlements: {},
               },
             ],

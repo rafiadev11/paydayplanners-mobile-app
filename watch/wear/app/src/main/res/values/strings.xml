@@ -1,0 +1,9 @@
+<resources>
+    <string name="tile_label">Payday Planner</string>
+    <string name="tile_description">Open your payday and bills at a glance.</string>
+    <string name="tile_headline">Payday &amp; bills</string>
+    <string name="tile_open_app">Open app</string>
+    <string name="complication_label">Open Payday Planner</string>
+    <string name="complication_short_text">Payday</string>
+    <string name="complication_long_text">Payday Planner</string>
+</resources>
