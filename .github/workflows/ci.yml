@@ -50,6 +50,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Watch packaging and shortcut regression checks
+        run: npm run watch:test:release
+
       - name: Native calendar layout regression
         run: npm run test:calendar-layout
 
