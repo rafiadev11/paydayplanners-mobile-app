@@ -1,25 +1,352 @@
 // !$*UTF8*$!
 {
- archiveVersion = 1; classes = {}; objectVersion = 56;
- objects = {
- A00000000000000000000001 = {isa = PBXProject; buildConfigurationList = A00000000000000000000002; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; knownRegions = (en, Base); mainGroup = A00000000000000000000003; projectDirPath = ""; projectRoot = ""; targets = (A00000000000000000000004);};
- A00000000000000000000002 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000005,A00000000000000000000006); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
- A00000000000000000000003 = {isa = PBXGroup; children = (A00000000000000000000016,A00000000000000000000011,A00000000000000000000012,A00000000000000000000013,A00000000000000000000014,A00000000000000000000015); sourceTree = "<group>";};
- A00000000000000000000004 = {isa = PBXNativeTarget; buildConfigurationList = A00000000000000000000002; buildPhases = (A00000000000000000000007); buildRules = (); dependencies = (); name = PaydayWatch; productName = PaydayWatch; productReference = A00000000000000000000015; productType = "com.apple.product-type.application";};
- A00000000000000000000005 = {isa = XCBuildConfiguration; name = Debug; buildSettings = {SDKROOT = watchos; SUPPORTED_PLATFORMS = "watchos watchsimulator"; WATCHOS_DEPLOYMENT_TARGET = 10.0; TARGETED_DEVICE_FAMILY = 4; SWIFT_VERSION = 5.0; GENERATE_INFOPLIST_FILE = YES; PAYDAY_API_BASE_URL = "https://paydayplanners.com/api/v1"; INFOPLIST_FILE = App/Info.plist; "CODE_SIGN_ENTITLEMENTS[sdk=watchsimulator*]" = App/Simulator.entitlements; ALWAYS_SEARCH_USER_PATHS = NO; INFOPLIST_KEY_CFBundleDisplayName = "Payday Planner"; INFOPLIST_KEY_WKApplication = YES; INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.paydayplanners.app; PRODUCT_BUNDLE_IDENTIFIER = com.paydayplanners.app.watchkitapp; PRODUCT_NAME = "$(TARGET_NAME)"; MARKETING_VERSION = 1.1.2; CURRENT_PROJECT_VERSION = 1; CODE_SIGN_STYLE = Automatic; SWIFT_OPTIMIZATION_LEVEL = "-Onone";};};
- A00000000000000000000006 = {isa = XCBuildConfiguration; name = Release; buildSettings = {SDKROOT = watchos; SUPPORTED_PLATFORMS = "watchos watchsimulator"; WATCHOS_DEPLOYMENT_TARGET = 10.0; TARGETED_DEVICE_FAMILY = 4; SWIFT_VERSION = 5.0; GENERATE_INFOPLIST_FILE = YES; PAYDAY_API_BASE_URL = "https://paydayplanners.com/api/v1"; INFOPLIST_FILE = App/Info.plist; "CODE_SIGN_ENTITLEMENTS[sdk=watchsimulator*]" = App/Simulator.entitlements; ALWAYS_SEARCH_USER_PATHS = NO; INFOPLIST_KEY_CFBundleDisplayName = "Payday Planner"; INFOPLIST_KEY_WKApplication = YES; INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.paydayplanners.app; PRODUCT_BUNDLE_IDENTIFIER = com.paydayplanners.app.watchkitapp; PRODUCT_NAME = "$(TARGET_NAME)"; MARKETING_VERSION = 1.1.2; CURRENT_PROJECT_VERSION = 1; CODE_SIGN_STYLE = Automatic; SWIFT_OPTIMIZATION_LEVEL = "-O";};};
- A00000000000000000000007 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000026,A00000000000000000000021,A00000000000000000000022,A00000000000000000000023,A00000000000000000000024); runOnlyForDeploymentPostprocessing = 0;};
- A00000000000000000000011 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/WatchCore/WatchSummary.swift; sourceTree = "<group>";};
- A00000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/PaydayWatchApp.swift; sourceTree = "<group>";};
- A00000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/WatchStore.swift; sourceTree = "<group>";};
- A00000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/SummaryView.swift; sourceTree = "<group>";};
- A00000000000000000000015 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = PaydayWatch.app; sourceTree = BUILT_PRODUCTS_DIR;};
- A00000000000000000000021 = {isa = PBXBuildFile; fileRef = A00000000000000000000011;};
- A00000000000000000000022 = {isa = PBXBuildFile; fileRef = A00000000000000000000012;};
- A00000000000000000000023 = {isa = PBXBuildFile; fileRef = A00000000000000000000013;};
- A00000000000000000000024 = {isa = PBXBuildFile; fileRef = A00000000000000000000014;};
- A00000000000000000000016 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/BillReminders.swift; sourceTree = "<group>";};
- A00000000000000000000026 = {isa = PBXBuildFile; fileRef = A00000000000000000000016;};
- };
- rootObject = A00000000000000000000001;
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXProject section */
+		A00000000000000000000001 /* PBXProject */ = {
+			isa = PBXProject;
+			buildConfigurationList = 9B7699B660944B9FA9ABEF9B;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A00000000000000000000003;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A00000000000000000000004 /* A00000000000000000000004 */,
+				B40A734C20444ED69D801753 /* "PaydayWatchWidgets" */,
+			);
+			productRefGroup = 0D4423FDAB944B59A702C5E1;
+		};
+/* End PBXProject section */
+
+/* Begin XCConfigurationList section */
+		A00000000000000000000002 /* XCConfigurationList */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000005 /* A00000000000000000000005 */,
+				A00000000000000000000006 /* A00000000000000000000006 */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		859BB1148913436791F2259B /* Build configuration list for PBXNativeTarget "PaydayWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				02BBC843F06047CE89D6913F /* Debug */,
+				C91581D4F5BD4E1185CF0899 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9B7699B660944B9FA9ABEF9B /* Build configuration list for PBXProject PaydayWatch */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB164B4DE19945E3BBABF3C5 /* Debug */,
+				2F2D86C1ABCE4CE692F2AD98 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin PBXGroup section */
+		A00000000000000000000003 /* PBXGroup */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000016 /* A00000000000000000000016 */,
+				A00000000000000000000011 /* A00000000000000000000011 */,
+				A00000000000000000000012 /* A00000000000000000000012 */,
+				A00000000000000000000013 /* A00000000000000000000013 */,
+				A00000000000000000000014 /* A00000000000000000000014 */,
+				A00000000000000000000015 /* A00000000000000000000015 */,
+				0AC863D1C8AD4B7087F1C596 /* PaydayWatchWidgets */,
+				0D4423FDAB944B59A702C5E1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0D4423FDAB944B59A702C5E1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CABBB818910E453CA574C9AC /* PaydayWatchWidgets.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0AC863D1C8AD4B7087F1C596 /* PaydayWatchWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				376339A726FC427EA96ECC60 /* PaydayWatchWidgets.swift */,
+				00B2ABD094B84C25B053BA40 /* Info.plist */,
+			);
+			name = PaydayWatchWidgets;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A00000000000000000000004 /* PaydayWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000002;
+			buildPhases = (
+				A00000000000000000000007 /* A00000000000000000000007 */,
+				BB73E71E87FE4F59828E49CE /* Copy Files */,
+				FE0ECEF0CFD6486BB2E59CBB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C60DB73BE2F048F5B67DDB35 /* PBXTargetDependency */,
+			);
+			name = PaydayWatch;
+			productName = PaydayWatch;
+			productReference = A00000000000000000000015;
+			productType = "com.apple.product-type.application";
+		};
+		B40A734C20444ED69D801753 /* "PaydayWatchWidgets" */ = {
+			isa = PBXNativeTarget;
+			name = "PaydayWatchWidgets";
+			productName = "PaydayWatchWidgets";
+			productReference = CABBB818910E453CA574C9AC;
+			productType = "com.apple.product-type.app-extension";
+			buildConfigurationList = 859BB1148913436791F2259B;
+			buildPhases = (
+				5AF7B1315680460A8E38F38E /* Sources */,
+				4BC97E3BB9184A3493A43FF0 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+		};
+/* End PBXNativeTarget section */
+
+/* Begin XCBuildConfiguration section */
+		A00000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			name = Debug;
+			buildSettings = {
+				SDKROOT = watchos;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				SWIFT_VERSION = 5.0;
+				GENERATE_INFOPLIST_FILE = YES;
+				PAYDAY_API_BASE_URL = "https://paydayplanners.com/api/v1";
+				INFOPLIST_FILE = App/Info.plist;
+				"CODE_SIGN_ENTITLEMENTS[sdk=watchsimulator*]" = App/Simulator.entitlements;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				INFOPLIST_KEY_CFBundleDisplayName = "Payday Planner";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.paydayplanners.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.paydayplanners.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = 1.1.2;
+				CURRENT_PROJECT_VERSION = 1;
+				CODE_SIGN_STYLE = Automatic;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+			};
+		};
+		A00000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			name = Release;
+			buildSettings = {
+				SDKROOT = watchos;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				SWIFT_VERSION = 5.0;
+				GENERATE_INFOPLIST_FILE = YES;
+				PAYDAY_API_BASE_URL = "https://paydayplanners.com/api/v1";
+				INFOPLIST_FILE = App/Info.plist;
+				"CODE_SIGN_ENTITLEMENTS[sdk=watchsimulator*]" = App/Simulator.entitlements;
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				INFOPLIST_KEY_CFBundleDisplayName = "Payday Planner";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.paydayplanners.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.paydayplanners.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = 1.1.2;
+				CURRENT_PROJECT_VERSION = 1;
+				CODE_SIGN_STYLE = Automatic;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+			};
+		};
+		02BBC843F06047CE89D6913F /* Debug */ = {
+			name = Debug;
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = Widgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_NAME = PaydayWatchWidgets;
+				SKIP_INSTALL = YES;
+				SDKROOT = watchos;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				SWIFT_VERSION = 5.0;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Payday Planner";
+				PRODUCT_BUNDLE_IDENTIFIER = com.paydayplanners.app.watchkitapp.widgets;
+				MARKETING_VERSION = 1.1.2;
+				CURRENT_PROJECT_VERSION = 1;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+		};
+		C91581D4F5BD4E1185CF0899 /* Release */ = {
+			name = Release;
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = Widgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				PRODUCT_NAME = PaydayWatchWidgets;
+				SKIP_INSTALL = YES;
+				SDKROOT = watchos;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				SWIFT_VERSION = 5.0;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Payday Planner";
+				PRODUCT_BUNDLE_IDENTIFIER = com.paydayplanners.app.watchkitapp.widgets;
+				MARKETING_VERSION = 1.1.2;
+				CURRENT_PROJECT_VERSION = 1;
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+		};
+		BB164B4DE19945E3BBABF3C5 /* Debug */ = {
+			name = Debug;
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+			};
+		};
+		2F2D86C1ABCE4CE692F2AD98 /* Release */ = {
+			name = Release;
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+			};
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A00000000000000000000007 /* PBXSourcesBuildPhase */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000026 /* A00000000000000000000026 */,
+				A00000000000000000000021 /* A00000000000000000000021 */,
+				A00000000000000000000022 /* A00000000000000000000022 */,
+				A00000000000000000000023 /* A00000000000000000000023 */,
+				A00000000000000000000024 /* A00000000000000000000024 */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5AF7B1315680460A8E38F38E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1F22E8B0CD234EDA99B728D4 /* PaydayWatchWidgets.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A00000000000000000000011 /* PBXFileReference */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/WatchCore/WatchSummary.swift; sourceTree = "<group>"; };
+		A00000000000000000000012 /* PBXFileReference */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/PaydayWatchApp.swift; sourceTree = "<group>"; };
+		A00000000000000000000013 /* PBXFileReference */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/WatchStore.swift; sourceTree = "<group>"; };
+		A00000000000000000000014 /* PBXFileReference */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/SummaryView.swift; sourceTree = "<group>"; };
+		A00000000000000000000015 /* PBXFileReference */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = PaydayWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000016 /* PBXFileReference */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/BillReminders.swift; sourceTree = "<group>"; };
+		CABBB818910E453CA574C9AC /* PaydayWatchWidgets.appex */ = {isa = PBXFileReference; name = "PaydayWatchWidgets.appex"; path = "PaydayWatchWidgets.appex"; sourceTree = BUILT_PRODUCTS_DIR; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; };
+		376339A726FC427EA96ECC60 /* PaydayWatchWidgets.swift */ = {isa = PBXFileReference; name = "PaydayWatchWidgets.swift"; path = "Widgets/PaydayWatchWidgets.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
+		00B2ABD094B84C25B053BA40 /* Info.plist */ = {isa = PBXFileReference; name = "Info.plist"; path = "Widgets/Info.plist"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = text.plist.xml; includeInIndex = 0; };
+		F963FB9B716C485D8D2436D0 /* Assets.xcassets */ = {isa = PBXFileReference; name = "Assets.xcassets"; path = "Assets.xcassets"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = folder.assetcatalog; explicitFileType = undefined; includeInIndex = 0; };
+/* End PBXFileReference section */
+
+/* Begin PBXBuildFile section */
+		A00000000000000000000021 /* PBXBuildFile */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011; };
+		A00000000000000000000022 /* PBXBuildFile */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012; };
+		A00000000000000000000023 /* PBXBuildFile */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013; };
+		A00000000000000000000024 /* PBXBuildFile */ = {isa = PBXBuildFile; fileRef = A00000000000000000000014; };
+		A00000000000000000000026 /* PBXBuildFile */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016; };
+		E5B23A860FCE45FA82C93D62 /* PaydayWatchWidgets.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = CABBB818910E453CA574C9AC /* PaydayWatchWidgets.appex */; };
+		1F22E8B0CD234EDA99B728D4 /* PaydayWatchWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 376339A726FC427EA96ECC60 /* PaydayWatchWidgets.swift */; };
+		88360B77B08E49FEA7DADFBC /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 00B2ABD094B84C25B053BA40 /* Info.plist */; };
+		17B67E1F8CCF431197E176EF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F963FB9B716C485D8D2436D0 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		BB73E71E87FE4F59828E49CE /* Copy Files */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E5B23A860FCE45FA82C93D62 /* PaydayWatchWidgets.appex in Copy Files */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Copy Files";
+			dstPath = "";
+			dstSubfolderSpec = 13;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4BC97E3BB9184A3493A43FF0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXContainerItemProxy section */
+		6B10928F531349C89ACD5510 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001;
+			proxyType = 1;
+			remoteGlobalIDString = B40A734C20444ED69D801753;
+			remoteInfo = "PaydayWatchWidgets";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		C60DB73BE2F048F5B67DDB35 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B40A734C20444ED69D801753 /* "PaydayWatchWidgets" */;
+			targetProxy = 6B10928F531349C89ACD5510 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXResourcesBuildPhase section */
+		FE0ECEF0CFD6486BB2E59CBB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				17B67E1F8CCF431197E176EF /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+	};
+	rootObject = A00000000000000000000001;
 }

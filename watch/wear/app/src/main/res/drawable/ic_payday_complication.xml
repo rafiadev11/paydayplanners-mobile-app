@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Two interlocking Ps, simplified for small and ambient watch-face slots. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M4,3H11A5,5 0,0 1,11 13H7V19H4ZM7,6V10H11A2,2 0,0 0,11 6ZM14,8H16A5,5 0,0 1,16 18H13V23H10V15H16A2,2 0,0 0,16 11H14Z" />
+</vector>
