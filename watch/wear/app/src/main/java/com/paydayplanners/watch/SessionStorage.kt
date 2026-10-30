@@ -10,9 +10,9 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-class SessionStorage(context: Context) {
-    private val file = File(context.noBackupFilesDir, "watch-session")
-    private val alias = "payday-watch-session"
+class SessionStorage(context: Context, name: String = "watch-session") {
+    private val file = File(context.noBackupFilesDir, name)
+    private val alias = if (name == "watch-session") "payday-watch-session" else "payday-$name"
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey(alias, null) as? SecretKey)?.let { return it }
@@ -31,7 +31,7 @@ class SessionStorage(context: Context) {
     }
     fun save(value: String) {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
-        val temporary = File(file.parentFile, "watch-session.tmp")
+        val temporary = File(file.parentFile, file.name + ".tmp")
         temporary.writeBytes(cipher.iv + cipher.doFinal(value.toByteArray(Charsets.UTF_8)))
         check(temporary.renameTo(file))
     }

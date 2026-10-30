@@ -18,6 +18,7 @@ export type User = {
   };
   features?: {
     watch_companion?: boolean;
+    watch_automatic_pairing?: boolean;
     bill_occurrence_adjustments?: boolean;
     purchase_planner?: boolean;
   };

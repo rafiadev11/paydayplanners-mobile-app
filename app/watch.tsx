@@ -1,5 +1,5 @@
 import { Redirect, Stack } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   AppState,
@@ -7,7 +7,9 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  Pressable,
 } from "react-native";
+import { watchPairing } from "@features/watch/native";
 import { useAuth } from "@features/auth/auth-context";
 import { useBiometricLock } from "@features/security/biometric-lock-context";
 import { api } from "@shared/api/client";
@@ -20,6 +22,10 @@ export default function WatchConnectionScreen() {
   const lock = useBiometricLock();
   const lockedRef = useRef(false);
   lockedRef.current = lock.enabled && lock.locked;
+  const [manual, setManual] = useState(false);
+  useEffect(() => {
+    void watchPairing?.probe().catch(() => undefined);
+  }, []);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -51,34 +57,48 @@ export default function WatchConnectionScreen() {
       <SurfaceCard>
         <Text style={styles.title}>Your payday, on your wrist</Text>
         <Text style={styles.copy}>
-          Open Payday Planner on your watch and choose Connect with phone. Enter
-          the eight-digit code shown there.
+          Open Payday Planner on your watch and choose Connect with phone.
+          {watchPairing && user.features?.watch_automatic_pairing
+            ? " Your watch will appear here automatically for you to confirm."
+            : " Enter the eight-digit code shown there."}
         </Text>
-        <TextInput
-          accessibilityLabel="Watch connection code"
-          value={code}
-          onChangeText={(text) => setCode(text.replace(/\D/g, "").slice(0, 8))}
-          keyboardType="number-pad"
-          maxLength={8}
-          placeholder="12345678"
-          autoComplete="off"
-          style={styles.input}
-          editable={!busy}
-        />
-        <PrimaryButton
-          label={busy ? "Connecting…" : "Connect watch"}
-          disabled={busy || code.length !== 8 || (lock.enabled && lock.locked)}
-          onPress={() =>
-            Alert.alert(
-              "Connect this watch?",
-              "This watch will be able to view your payday and bill information without unlocking your phone. Only approve a code displayed on your own watch.",
-              [
-                { text: "Cancel", style: "cancel" },
-                { text: "Connect", onPress: () => void approve() },
-              ],
-            )
-          }
-        />
+        {!manual && watchPairing && user.features?.watch_automatic_pairing ? (
+          <Pressable accessibilityRole="button" onPress={() => setManual(true)}>
+            <Text style={styles.copy}>Use a code instead</Text>
+          </Pressable>
+        ) : (
+          <>
+            <TextInput
+              accessibilityLabel="Watch connection code"
+              value={code}
+              onChangeText={(text) =>
+                setCode(text.replace(/\D/g, "").slice(0, 8))
+              }
+              keyboardType="number-pad"
+              maxLength={8}
+              placeholder="12345678"
+              autoComplete="off"
+              style={styles.input}
+              editable={!busy}
+            />
+            <PrimaryButton
+              label={busy ? "Connecting…" : "Connect watch"}
+              disabled={
+                busy || code.length !== 8 || (lock.enabled && lock.locked)
+              }
+              onPress={() =>
+                Alert.alert(
+                  "Connect this watch?",
+                  "This watch will be able to view your payday and bill information without unlocking your phone. Only approve a code displayed on your own watch.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Connect", onPress: () => void approve() },
+                  ],
+                )
+              }
+            />
+          </>
+        )}
         {message ? (
           <Text accessibilityLiveRegion="polite" style={styles.copy}>
             {message}
