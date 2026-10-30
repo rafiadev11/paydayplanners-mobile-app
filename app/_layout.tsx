@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { WatchPairingCoordinator } from "@features/watch/watch-pairing-coordinator";
 import { AppUpdateGate } from "@features/app-update/app-update-gate";
 import { AuthProvider, useAuth } from "@features/auth/auth-context";
 import { BillReminderProvider } from "@features/notifications/bill-reminder-context";
@@ -367,6 +368,7 @@ function RootLayout() {
         <BillReminderProvider>
           <BiometricLockProvider>
             <RootNavigator />
+            <WatchPairingCoordinator />
             <AppUpdateGate />
           </BiometricLockProvider>
         </BillReminderProvider>

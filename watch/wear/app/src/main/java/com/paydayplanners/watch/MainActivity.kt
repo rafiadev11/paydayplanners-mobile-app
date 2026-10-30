@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
     private var refreshJob: Job? = null
     override fun onResume() {
         super.onResume()
+        store.setForeground(true)
         refreshJob = lifecycleScope.launch {
             while (true) { store.refresh(force = false); delay(60_000) }
         }
@@ -58,7 +59,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         if (intent.action == "com.paydayplanners.watch.OPEN_BILLS") store.openFromNotification()
     }
-    override fun onPause() { refreshJob?.cancel(); super.onPause() }
+    override fun onPause() { store.setForeground(false); refreshJob?.cancel(); super.onPause() }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (intent.action == "com.paydayplanners.watch.OPEN_BILLS") store.openFromNotification()
@@ -171,8 +172,12 @@ private fun SummaryScreen(store: WatchStore) {
                 item { Text("Your watch is connected.", color = Muted, fontSize = 12.sp) }
             } else {
                 item { Text("Your payday, at a glance", fontSize = 18.sp, textAlign = TextAlign.Center) }
-                store.connectionCode?.let { code -> item { Text(code, color = Mint, fontSize = 24.sp, fontWeight = FontWeight.Bold) } }
+                store.connectionCode?.takeIf { store.showManualCode }?.let { code -> item { Text(code, color = Mint, fontSize = 24.sp, fontWeight = FontWeight.Bold) } }
                 item { Button(onClick = store::connect, enabled = !store.linking, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), colors = ButtonDefaults.buttonColors(containerColor = Card, contentColor = Mint)) { Text(if (store.linking) "Waiting for phone…" else "Connect with phone", fontSize = 12.sp, textAlign = TextAlign.Center) } }
+            }
+            if (store.linking) {
+                if (!store.showManualCode) item { Button(onClick = { store.showManualCode = true }, modifier = Modifier.fillMaxWidth()) { Text("Use a code instead", fontSize = 11.sp) } }
+                item { Button(onClick = store::cancelConnection, modifier = Modifier.fillMaxWidth()) { Text("Cancel", fontSize = 11.sp) } }
             }
             if (summary == null) store.message?.let { item { Text(it, color = Muted, fontSize = 11.sp, textAlign = TextAlign.Center) } }
             if (store.connected && selectedBillID == null && !reminderSettings) {

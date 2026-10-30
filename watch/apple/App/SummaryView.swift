@@ -66,7 +66,7 @@ struct SummaryView: View {
                         } else {
                             Image(systemName: "applewatch").font(.title2).foregroundStyle(paydayMint)
                             Text("Your payday, at a glance").font(.headline)
-                            if let code = store.connectionCode {
+                            if let code = store.connectionCode, store.showManualCode {
                                 Text(code).font(.title3.monospacedDigit().bold())
                                     .accessibilityLabel("Connection code \(code.map(String.init).joined(separator: " "))")
                                 Text("On your phone: Account menu → Connect your watch").font(.caption2).foregroundStyle(.secondary)
@@ -74,6 +74,10 @@ struct SummaryView: View {
                             Button(store.linking ? "Waiting for phone…" : "Connect with phone") {
                                 connectionTask = Task { await store.connect() }
                             }.disabled(store.linking)
+                            if store.linking {
+                                if !store.showManualCode { Button("Use a code instead") { store.showManualCode = true }.font(.caption2) }
+                                Button("Cancel") { connectionTask?.cancel(); store.cancelConnection() }.font(.caption2)
+                            }
                         }
                         if store.summary == nil, let message = store.message {
                             Text(message).font(.caption2).foregroundStyle(.secondary).accessibilityLabel(message)

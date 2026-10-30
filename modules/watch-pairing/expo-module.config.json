@@ -1,0 +1,8 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["WatchPairingModule"],
+    "appDelegateSubscribers": ["WatchPairingAppDelegateSubscriber"]
+  },
+  "android": { "modules": ["com.paydayplanners.pairing.WatchPairingModule"] }
+}

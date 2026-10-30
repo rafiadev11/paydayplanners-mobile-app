@@ -53,41 +53,91 @@ class WatchStore(application: Application) : AndroidViewModel(application) {
     private var ready = false
     private var lastAttempt: java.time.Instant? = null
     private var linkJob: Job? = null
-    fun stopLinking() { linkJob?.cancel() }
+    var showManualCode by mutableStateOf(false)
+    private var linkGeneration = 0L
+    private var foreground = false
+    private var committingSession = false
+    fun setForeground(active: Boolean) {
+        foreground = active
+        if (!active) stopLinking()
+        else if (ready && !connected && WatchPairingTransport.pending(getApplication()) != null) connect()
+    }
+    fun stopLinking() { if (committingSession) return; linkGeneration++; linkJob?.cancel(); linking = false; connectionCode = null }
+    fun cancelConnection() {
+        if (connected || committingSession) return
+        stopLinking()
+        val pending = WatchPairingTransport.pending(getApplication())
+        SessionStorage(getApplication(), "watch-pending-link").clear()
+        connectionCode = null
+        linking = false
+        message = "Connection cancelled. Start again when you’re ready."
+        if (pending != null) viewModelScope.launch { runCatching { linkRequest("watch/link/cancel", JSONObject().put("secret", pending.getString("secret"))) } }
+    }
+    private suspend fun acknowledgePending() {
+        val pending = WatchPairingTransport.pending(getApplication()) ?: return
+        if (pending.optInt("protocol") != 2 || runCatching { linkRequest("watch/link/acknowledge", JSONObject().put("secret", pending.getString("secret"))) }.isSuccess) {
+            SessionStorage(getApplication(), "watch-pending-link").clear()
+        }
+    }
     fun connect() {
-        if (linking) return
+        if (linking || connected) return
+        val generation = ++linkGeneration
         linking = true
-        message = null
+        showManualCode = false
+        message = "Finding your phone…"
         linkJob = viewModelScope.launch {
             try {
-                val start = linkRequest("watch/link", JSONObject().put("platform", "wearos"))
+                val start = WatchPairingTransport.pending(getApplication()) ?: linkRequest("watch/link", JSONObject().put("platform", "wearos").put("protocol", 2)).put("api_base", BuildConfig.API_BASE_URL).also {
+                    SessionStorage(getApplication(), "watch-pending-link").save(it.toString())
+                }
+                if (generation != linkGeneration) return@launch
                 connectionCode = start.getString("code")
-                message = "On your phone, open the account menu → Connect your watch."
-                repeat(120) {
+                val automatic = start.optInt("protocol") == 2
+                showManualCode = !automatic
+                message = if (automatic) "Open Payday Planner on your phone to finish connecting." else "On your phone: Account menu → Connect your watch."
+                val expiry = java.time.Instant.parse(start.getString("expires_at"))
+                var attempts = 0
+                while (expiry.isAfter(java.time.Instant.now())) {
+                    if (automatic && attempts++ % 3 == 0) WatchPairingTransport.send(getApplication())
                     delay(5000)
-                    val status = linkRequest("watch/link/status", JSONObject().put("secret", start.getString("secret")))
+                    val status = try { linkRequest("watch/link/status", JSONObject().put("secret", start.getString("secret"))) }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (expired: LinkExpired) { throw expired }
+                    catch (_: Exception) { message = "Waiting for a connection. Keep your phone nearby."; continue }
+                    if (generation != linkGeneration) return@launch
                     if (status.optString("status") == "approved") {
-                        withContext(Dispatchers.IO) {
-                            SessionStorage(getApplication()).save(JSONObject().put("apiBaseURL", BuildConfig.API_BASE_URL).put("token", status.getString("token")).toString())
-                            cache.delete()
-                        }
+                        committingSession = true
+                        try {
+                            withContext(Dispatchers.IO) {
+                                SessionStorage(getApplication()).save(JSONObject().put("apiBaseURL", BuildConfig.API_BASE_URL).put("token", status.getString("token")).toString())
+                                cache.delete()
+                            }
+                        } finally { committingSession = false }
                         clearReminders()
                         connected = true
                         lastAttempt = null
                         summary = null
                         linking = false
                         refresh()
+                        acknowledgePending()
                         return@launch
                     }
                 }
-                message = "Code expired. Request a new code."
+                SessionStorage(getApplication(), "watch-pending-link").clear()
+                message = "Request expired. Connect again."
             } catch (cancelled: CancellationException) {
                 throw cancelled
+            } catch (_: LinkExpired) {
+                if (generation != linkGeneration) return@launch
+                SessionStorage(getApplication(), "watch-pending-link").clear()
+                message = "Request expired. Connect again."
             } catch (_: Exception) {
+                if (generation != linkGeneration) return@launch
                 message = "Unable to connect. Try again with internet access."
-            } finally { linking = false; connectionCode = null }
+            } finally { if (generation == linkGeneration) { linking = false; connectionCode = null } }
         }
     }
+    private class LinkExpired : Exception()
     private suspend fun linkRequest(path: String, body: JSONObject): JSONObject = withContext(Dispatchers.IO) {
         val connection = URL(BuildConfig.API_BASE_URL + "/" + path).openConnection() as HttpsURLConnection
         connection.requestMethod = "POST"
@@ -99,6 +149,7 @@ class WatchStore(application: Application) : AndroidViewModel(application) {
         connection.setRequestProperty("Accept", "application/json")
         try {
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            if (connection.responseCode == 410) throw LinkExpired()
             check(connection.responseCode in 200..299)
             connection.inputStream.bufferedReader().use { JSONObject(it.readText()) }
         } finally { connection.disconnect() }
@@ -115,7 +166,8 @@ class WatchStore(application: Application) : AndroidViewModel(application) {
             } else null
             if (!sessionExists) { clearReminders(); withContext(Dispatchers.IO) { cache.delete() } }
             ready = true
-            refresh()
+            if (connected) acknowledgePending()
+            if (foreground && !connected && WatchPairingTransport.pending(getApplication()) != null) connect() else refresh()
         }
     }
     fun refresh(force: Boolean = true) {

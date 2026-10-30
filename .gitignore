@@ -53,3 +53,7 @@ watch/wear/**/build/
 /credentials.json
 /keystore-*
 *.keystore
+
+# Local Expo module build outputs
+/modules/**/build/
+/modules/**/.gradle/
