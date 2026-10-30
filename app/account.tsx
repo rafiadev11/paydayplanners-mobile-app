@@ -1,5 +1,10 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Redirect, useRootNavigationState, useRouter } from "expo-router";
+import {
+  Redirect,
+  useRootNavigationState,
+  useRouter,
+  type Href,
+} from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -558,6 +563,14 @@ export default function AccountInfoScreen() {
           </SurfaceCard>
         ) : null}
 
+        {user.features?.watch_companion ? (
+          <ActionButton
+            label="Connect your watch"
+            icon="watch"
+            tone="secondary"
+            onPress={() => router.push("/watch" as Href)}
+          />
+        ) : null}
         <SurfaceCard style={styles.formCard}>
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderCopy}>

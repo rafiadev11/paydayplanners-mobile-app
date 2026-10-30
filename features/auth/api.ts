@@ -17,6 +17,7 @@ export type User = {
     finished_at?: string | null;
   };
   features?: {
+    watch_companion?: boolean;
     bill_occurrence_adjustments?: boolean;
     purchase_planner?: boolean;
   };

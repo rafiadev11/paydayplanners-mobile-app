@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "planning_revision": 12,
+  "generated_at": "2026-10-27T14:00:00+00:00",
+  "valid_until": "2026-10-28T00:00:00-04:00",
+  "timezone": "America/New_York",
+  "currency": "USD",
+  "as_of_date": "2026-10-27",
+  "next_payday": { "date": "2026-10-30", "amount_minor": 210000 },
+  "due_before_payday_minor": 24500,
+  "due_on_payday_minor": 0,
+  "overdue_count": 0,
+  "next_bill": {
+    "id": "1",
+    "name": "Internet",
+    "due_date": "2026-10-28",
+    "amount_minor": 10500,
+    "unfunded_minor": 4000,
+    "overdue": false
+  },
+  "funding_warning": {
+    "id": "1",
+    "name": "Internet",
+    "due_date": "2026-10-28",
+    "amount_minor": 10500,
+    "unfunded_minor": 4000,
+    "overdue": false
+  },
+  "bills": [
+    {
+      "id": "1",
+      "name": "Internet",
+      "due_date": "2026-10-28",
+      "amount_minor": 10500,
+      "unfunded_minor": 4000,
+      "overdue": false
+    },
+    {
+      "id": "2",
+      "name": "Phone",
+      "due_date": "2026-10-29",
+      "amount_minor": 14000,
+      "unfunded_minor": 0,
+      "overdue": false
+    }
+  ],
+  "total_bill_count": 2,
+  "capabilities": ["read"]
+}

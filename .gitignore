@@ -41,3 +41,10 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Native watch build outputs
+watch/apple/.build/
+watch/apple/build/
+watch/wear/.gradle/
+watch/wear/local.properties
+watch/wear/**/build/

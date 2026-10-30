@@ -37,7 +37,11 @@
     "format:check": "prettier --check .",
     "expo:config:check": "npx expo config --json > /dev/null",
     "test": "tsx --test shared/lib/*.test.ts",
-    "test:calendar-layout": "tsx --test shared/lib/month-grid.native-test.ts"
+    "test:calendar-layout": "tsx --test shared/lib/month-grid.native-test.ts",
+    "watch:test:apple": "swift test --package-path watch/apple",
+    "watch:build:apple": "xcodebuild -project watch/apple/PaydayWatch.xcodeproj -scheme PaydayWatch -sdk watchsimulator -configuration Debug -derivedDataPath watch/apple/build CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES build",
+    "watch:build:wear": "./watch/wear/gradlew -p watch/wear :app:assembleDebug",
+    "watch:test:wear": "./watch/wear/gradlew -p watch/wear :app:testDebugUnitTest :app:lintDebug"
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.6",
