@@ -48,3 +48,8 @@ watch/apple/build/
 watch/wear/.gradle/
 watch/wear/local.properties
 watch/wear/**/build/
+
+# Local release credentials
+/credentials.json
+/keystore-*
+*.keystore

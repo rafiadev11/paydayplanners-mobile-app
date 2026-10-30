@@ -84,7 +84,7 @@ final class WatchStore: ObservableObject {
             let start = try await linkRequest(base.appendingPathComponent("watch/link"), body: ["platform": "watchos"])
             guard let secret = start["secret"] as? String, let code = start["code"] as? String else { throw URLError(.cannotParseResponse) }
             connectionCode = code
-            message = "On your phone, open Account → Connect your watch."
+            message = "On your phone, open the account menu → Connect your watch."
             for _ in 0..<120 {
                 try await Task.sleep(for: .seconds(5))
                 let status = try await linkRequest(base.appendingPathComponent("watch/link/status"), body: ["secret": secret])

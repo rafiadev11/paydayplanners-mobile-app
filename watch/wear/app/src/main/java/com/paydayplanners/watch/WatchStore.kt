@@ -62,7 +62,7 @@ class WatchStore(application: Application) : AndroidViewModel(application) {
             try {
                 val start = linkRequest("watch/link", JSONObject().put("platform", "wearos"))
                 connectionCode = start.getString("code")
-                message = "On your phone, open Account → Connect your watch."
+                message = "On your phone, open the account menu → Connect your watch."
                 repeat(120) {
                     delay(5000)
                     val status = linkRequest("watch/link/status", JSONObject().put("secret", start.getString("secret")))

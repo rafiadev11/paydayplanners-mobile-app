@@ -6,6 +6,7 @@ import {
   Easing,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -52,14 +53,16 @@ function AccountDrawerItem({
   subtitle: string;
   onPress?: () => void;
   disabled?: boolean;
-  tone?: "default" | "danger";
+  tone?: "default" | "danger" | "primary";
 }) {
   return (
     <Pressable
+      accessibilityRole="button"
       disabled={disabled || !onPress}
       onPress={onPress}
       style={({ pressed }) => [
         styles.drawerItem,
+        tone === "primary" ? styles.drawerItemPrimary : null,
         pressed && !disabled && onPress ? styles.drawerItemPressed : null,
         disabled ? styles.drawerItemDisabled : null,
       ]}
@@ -67,11 +70,18 @@ function AccountDrawerItem({
       <View
         style={[
           styles.drawerItemIconWrap,
+          tone === "primary" ? styles.drawerItemIconPrimary : null,
           tone === "danger" ? styles.drawerItemIconDanger : null,
         ]}
       >
         <MaterialCommunityIcons
-          color={tone === "danger" ? theme.colors.danger : theme.colors.ink}
+          color={
+            tone === "primary"
+              ? theme.colors.white
+              : tone === "danger"
+                ? theme.colors.danger
+                : theme.colors.ink
+          }
           name={icon}
           size={20}
         />
@@ -106,6 +116,7 @@ export function AccountDrawer({
   userName,
   onClose,
   onOpenAccount,
+  onOpenWatch,
   onOpenHelpAndLegal,
   onOpenDeleteAccount,
   onSignOut,
@@ -114,6 +125,7 @@ export function AccountDrawer({
   userName?: string | null;
   onClose: () => void;
   onOpenAccount: () => void;
+  onOpenWatch?: () => void;
   onOpenHelpAndLegal: () => void;
   onOpenDeleteAccount: () => void;
   onSignOut: () => void;
@@ -192,96 +204,115 @@ export function AccountDrawer({
           ]}
         >
           <SafeAreaView edges={["top", "bottom"]} style={styles.drawerPanel}>
-            <View style={styles.drawerHeader}>
-              <View style={styles.drawerHeaderCopy}>
-                <Text style={styles.drawerEyebrow}>Account</Text>
-                <Text style={styles.drawerTitle}>{userName ?? "Account"}</Text>
-              </View>
-              <Pressable
-                hitSlop={10}
-                onPress={onClose}
-                style={({ pressed }) => [
-                  styles.drawerCloseButton,
-                  pressed ? styles.accountButtonPressed : null,
-                ]}
-              >
-                <MaterialCommunityIcons
-                  color={theme.colors.ink}
-                  name="close"
-                  size={20}
-                />
-              </Pressable>
-            </View>
-
-            <View style={styles.drawerGroup}>
-              <AccountDrawerItem
-                icon="account-edit-outline"
-                onPress={onOpenAccount}
-                subtitle="Update your name, email, and personal profile details."
-                title="Account info"
-              />
-            </View>
-
-            <View style={styles.drawerUtilitySection}>
-              <Pressable
-                onPress={onOpenHelpAndLegal}
-                style={({ pressed }) => [
-                  styles.drawerFooterLink,
-                  styles.drawerUtilityLink,
-                  pressed ? styles.drawerItemPressed : null,
-                ]}
-              >
-                <MaterialCommunityIcons
-                  color={theme.colors.primaryStrong}
-                  name="lifebuoy"
-                  size={18}
-                />
-                <Text style={styles.drawerFooterLinkLabel}>Help & Support</Text>
-                <MaterialCommunityIcons
-                  color={theme.colors.muted}
-                  name="chevron-right"
-                  size={18}
-                />
-              </Pressable>
-            </View>
-
-            <View style={styles.drawerFooter}>
-              <Pressable
-                onPress={onOpenDeleteAccount}
-                style={({ pressed }) => [
-                  styles.drawerFooterLink,
-                  styles.drawerFooterDangerLink,
-                  pressed ? styles.drawerItemPressed : null,
-                ]}
-              >
-                <MaterialCommunityIcons
-                  color={theme.colors.danger}
-                  name="delete-outline"
-                  size={18}
-                />
-                <Text
-                  style={[
-                    styles.drawerFooterLinkLabel,
-                    styles.drawerFooterDangerLinkLabel,
+            <ScrollView
+              style={styles.drawerScroll}
+              contentContainerStyle={styles.drawerContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.drawerHeader}>
+                <View style={styles.drawerHeaderCopy}>
+                  <Text style={styles.drawerEyebrow}>Account</Text>
+                  <Text style={styles.drawerTitle}>
+                    {userName ?? "Account"}
+                  </Text>
+                </View>
+                <Pressable
+                  hitSlop={10}
+                  onPress={onClose}
+                  style={({ pressed }) => [
+                    styles.drawerCloseButton,
+                    pressed ? styles.accountButtonPressed : null,
                   ]}
                 >
-                  Delete account
-                </Text>
-                <MaterialCommunityIcons
-                  color={theme.colors.danger}
-                  name="chevron-right"
-                  size={18}
+                  <MaterialCommunityIcons
+                    color={theme.colors.ink}
+                    name="close"
+                    size={20}
+                  />
+                </Pressable>
+              </View>
+
+              <View style={styles.drawerGroup}>
+                <AccountDrawerItem
+                  icon="account-edit-outline"
+                  onPress={onOpenAccount}
+                  subtitle="Update your name, email, and personal profile details."
+                  title="Account info"
                 />
-              </Pressable>
-              <SecondaryButton
-                icon="logout"
-                label="Log out"
-                onPress={onSignOut}
-              />
-              <Text style={styles.drawerVersionLabel}>
-                Version {APP_VERSION}
-              </Text>
-            </View>
+                {onOpenWatch ? (
+                  <AccountDrawerItem
+                    icon="watch-variant"
+                    onPress={onOpenWatch}
+                    subtitle="Your payday and bills, on your wrist."
+                    title="Connect your watch"
+                    tone="primary"
+                  />
+                ) : null}
+              </View>
+
+              <View style={styles.drawerUtilitySection}>
+                <Pressable
+                  onPress={onOpenHelpAndLegal}
+                  style={({ pressed }) => [
+                    styles.drawerFooterLink,
+                    styles.drawerUtilityLink,
+                    pressed ? styles.drawerItemPressed : null,
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    color={theme.colors.primaryStrong}
+                    name="lifebuoy"
+                    size={18}
+                  />
+                  <Text style={styles.drawerFooterLinkLabel}>
+                    Help & Support
+                  </Text>
+                  <MaterialCommunityIcons
+                    color={theme.colors.muted}
+                    name="chevron-right"
+                    size={18}
+                  />
+                </Pressable>
+              </View>
+
+              <View style={styles.drawerFooter}>
+                <Pressable
+                  onPress={onOpenDeleteAccount}
+                  style={({ pressed }) => [
+                    styles.drawerFooterLink,
+                    styles.drawerFooterDangerLink,
+                    pressed ? styles.drawerItemPressed : null,
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    color={theme.colors.danger}
+                    name="delete-outline"
+                    size={18}
+                  />
+                  <Text
+                    style={[
+                      styles.drawerFooterLinkLabel,
+                      styles.drawerFooterDangerLinkLabel,
+                    ]}
+                  >
+                    Delete account
+                  </Text>
+                  <MaterialCommunityIcons
+                    color={theme.colors.danger}
+                    name="chevron-right"
+                    size={18}
+                  />
+                </Pressable>
+                <SecondaryButton
+                  icon="logout"
+                  label="Log out"
+                  onPress={onSignOut}
+                />
+                <Text style={styles.drawerVersionLabel}>
+                  Version {APP_VERSION}
+                </Text>
+              </View>
+            </ScrollView>
           </SafeAreaView>
         </Animated.View>
       </View>
@@ -337,6 +368,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.xxl + theme.spacing.xl,
     paddingBottom: theme.spacing.xxl,
+  },
+  drawerScroll: {
+    flex: 1,
+  },
+  drawerContent: {
+    flexGrow: 1,
     gap: theme.spacing.lg,
   },
   drawerHeader: {
@@ -403,6 +440,14 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
+  },
+  drawerItemPrimary: {
+    backgroundColor: withAlpha(theme.colors.primarySoft, 0.55),
+    borderColor: withAlpha(theme.colors.primary, 0.22),
+  },
+  drawerItemIconPrimary: {
+    backgroundColor: theme.colors.primaryStrong,
+    borderRadius: 14,
   },
   drawerItemPressed: {
     opacity: 0.84,

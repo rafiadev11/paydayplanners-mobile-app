@@ -86,6 +86,11 @@ export default function MoneyScreen() {
     router.push("/account");
   }, [router]);
 
+  const openWatch = useCallback(() => {
+    setDrawerOpen(false);
+    router.push("/watch");
+  }, [router]);
+
   const openHelpAndLegal = useCallback(() => {
     setDrawerOpen(false);
     router.push("/help-and-legal");
@@ -153,6 +158,7 @@ export default function MoneyScreen() {
           setDrawerOpen(false);
         }}
         onOpenAccount={openAccount}
+        onOpenWatch={user?.features?.watch_companion ? openWatch : undefined}
         onOpenHelpAndLegal={openHelpAndLegal}
         onOpenDeleteAccount={openDeleteAccount}
         onSignOut={handleSignOut}

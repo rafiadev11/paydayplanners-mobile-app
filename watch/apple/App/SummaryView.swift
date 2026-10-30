@@ -69,7 +69,7 @@ struct SummaryView: View {
                             if let code = store.connectionCode {
                                 Text(code).font(.title3.monospacedDigit().bold())
                                     .accessibilityLabel("Connection code \(code.map(String.init).joined(separator: " "))")
-                                Text("On your phone: Account → Connect your watch").font(.caption2).foregroundStyle(.secondary)
+                                Text("On your phone: Account menu → Connect your watch").font(.caption2).foregroundStyle(.secondary)
                             }
                             Button(store.linking ? "Waiting for phone…" : "Connect with phone") {
                                 connectionTask = Task { await store.connect() }
