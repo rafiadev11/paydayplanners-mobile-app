@@ -34,12 +34,12 @@ struct SummaryView: View {
                                 (Text(summary.money(amount)).bold() + Text(" in bills before then"))
                                     .font(.caption).fixedSize(horizontal: false, vertical: true)
                             }
-                            if let bill = summary.nextBill {
+                            if let bill = summary.upcomingBills(now: context.date).first {
                                 billLink(bill, summary: summary, title: "NEXT BILL", now: context.date)
                             } else {
-                                Label("No unpaid bills", systemImage: "checkmark.circle").font(.caption).foregroundStyle(paydayMint)
+                                Label("No upcoming bills in this window", systemImage: "checkmark.circle").font(.caption).foregroundStyle(paydayMint)
                             }
-                            if let warning = summary.fundingWarning {
+                            if let warning = summary.fundingWarning, (summary.daysUntil(warning.dueDate, now: context.date) ?? -1) >= 0 {
                                 NavigationLink {
                                     BillDetail(billID: warning.id, store: store)
                                 } label: {
@@ -54,11 +54,14 @@ struct SummaryView: View {
                             if let onPayday = summary.dueOnPaydayMinor, onPayday > 0 {
                                 Text("Plus \(summary.money(onPayday)) due on payday").font(.caption2).foregroundStyle(.secondary)
                             }
-                            ForEach(summary.bills.filter { $0.id != summary.nextBill?.id }) { bill in
+                            ForEach(Array(summary.upcomingBills(now: context.date).dropFirst())) { bill in
                                 billLink(bill, summary: summary, title: nil, now: context.date)
                             }
+                            if let notice = summary.overdueNotice(now: context.date) {
+                                Text(notice).font(.caption2).foregroundStyle(.orange)
+                            }
                             if summary.totalBillCount > summary.bills.count {
-                                Text("Showing the next \(summary.bills.count) bills. See all on your phone.").font(.caption2).foregroundStyle(.secondary)
+                                Text("Showing \(summary.upcomingBills(now: context.date).count) upcoming bills. See all on your phone.").font(.caption2).foregroundStyle(.secondary)
                             }
                         } else if store.connected {
                             Label(store.message == nil ? "Loading your plan" : "Plan unavailable", systemImage: "arrow.triangle.2.circlepath").font(.headline)
