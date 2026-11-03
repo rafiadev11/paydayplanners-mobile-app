@@ -41,6 +41,16 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-keep @interface expo.modules.kotlin.records.** { *; }\n-keep class expo.modules.notifications.** implements java.io.Serializable { *; }"
+          }
+        }
+      ],
       "expo-router",
       "expo-secure-store",
       "@react-native-community/datetimepicker",
@@ -65,6 +75,7 @@
       ],
       "expo-font",
       "@sentry/react-native",
+      "./plugins/with-android-optimization.cjs",
       "./plugins/with-payday-watch.cjs"
     ],
     "experiments": {
