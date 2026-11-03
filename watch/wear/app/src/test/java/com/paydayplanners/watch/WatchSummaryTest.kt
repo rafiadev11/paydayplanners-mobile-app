@@ -15,6 +15,18 @@ class WatchSummaryTest {
         assertNull(summary.copy(overdueCount = 0).overdueNotice(Instant.parse("2026-10-27T14:00:00Z")))
         assertEquals("1 overdue bill · review on phone", summary.copy(overdueCount = 0).overdueNotice(now))
     }
+    @Test fun overdueCountIncludesReminderOnlyBillsWithoutDoubleCounting() {
+        val original = WatchSummary.decode(raw())
+        val due = (1..8).map { original.bills[0].copy(id = "$it", dueDate = "2026-10-28", overdue = false) }
+        val historical = due[0].copy(id = "old", dueDate = "2026-05-01", overdue = true)
+        val future = due[0].copy(id = "future", dueDate = "2026-10-30")
+        val summary = original.copy(bills = due.take(5), reminderBills = due + due[0] + historical + future, overdueCount = 3)
+        val now = Instant.parse("2026-10-29T14:00:00Z")
+        assertEquals("11 overdue bills · review on phone", summary.overdueNotice(now))
+        assertEquals("3 overdue bills · review on phone", summary.overdueNotice(Instant.parse("2026-10-28T14:00:00Z")))
+        assertEquals("8 overdue bills · review on phone", summary.copy(reminderBills = null).overdueNotice(now))
+        assertEquals("8 overdue bills · review on phone", summary.copy(reminderBills = emptyList()).overdueNotice(now))
+    }
     @Test fun readsSharedFinancialContract() {
         val summary = WatchSummary.decode(raw())
         assertEquals(210000L, summary.nextPayday!!.amountMinor)

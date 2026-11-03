@@ -20,7 +20,8 @@ data class WatchSummary(
 ) {
     fun upcomingBills(now: Instant = Instant.now()) = bills.filter { daysUntil(it.dueDate, now) >= 0 }
     fun overdueNotice(now: Instant = Instant.now()): String? {
-        val count = overdueCount + bills.count { !it.overdue && daysUntil(it.dueDate, now) < 0 }
+        val knownBills = (bills + (reminderBills ?: emptyList())).distinctBy { it.id }
+        val count = overdueCount + knownBills.count { !it.overdue && daysUntil(it.dueDate, now) < 0 }
         return if (count > 0) "$count overdue ${if (count == 1) "bill" else "bills"} · review on phone" else null
     }
     val reminderSource get() = reminderBills ?: bills

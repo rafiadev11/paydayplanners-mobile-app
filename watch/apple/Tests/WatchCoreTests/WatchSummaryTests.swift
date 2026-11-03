@@ -18,6 +18,35 @@ final class WatchSummaryTests: XCTestCase {
         XCTAssertEqual(original.overdueNotice(now: now), "1 overdue bill · review on phone")
         XCTAssertNil(original.overdueNotice(now: ISO8601DateFormatter().date(from: "2026-10-27T14:00:00Z")!))
     }
+    func testOverdueCountIncludesReminderOnlyBillsWithoutDoubleCounting() throws {
+        var json = try JSONSerialization.jsonObject(with: fixture()) as! [String: Any]
+        let template = (json["bills"] as! [[String: Any]])[0]
+        let due = (1...8).map { id -> [String: Any] in
+            var bill = template
+            bill["id"] = String(id)
+            bill["due_date"] = "2026-10-28"
+            bill["overdue"] = false
+            return bill
+        }
+        var historical = template
+        historical["id"] = "old"
+        historical["due_date"] = "2026-05-01"
+        historical["overdue"] = true
+        var future = template
+        future["id"] = "future"
+        future["due_date"] = "2026-10-30"
+        json["bills"] = Array(due.prefix(5))
+        json["reminder_bills"] = due + [due[0], historical, future]
+        json["overdue_count"] = 3
+        let now = ISO8601DateFormatter().date(from: "2026-10-29T14:00:00Z")!
+        let summary = try WatchSummary.decode(JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(summary.overdueNotice(now: now), "11 overdue bills · review on phone")
+        XCTAssertEqual(summary.overdueNotice(now: ISO8601DateFormatter().date(from: "2026-10-28T14:00:00Z")!), "3 overdue bills · review on phone")
+        json.removeValue(forKey: "reminder_bills")
+        XCTAssertEqual(try WatchSummary.decode(JSONSerialization.data(withJSONObject: json)).overdueNotice(now: now), "8 overdue bills · review on phone")
+        json["reminder_bills"] = [] as [[String: Any]]
+        XCTAssertEqual(try WatchSummary.decode(JSONSerialization.data(withJSONObject: json)).overdueNotice(now: now), "8 overdue bills · review on phone")
+    }
     func testDecodesSharedContractWithoutRoundingMoney() throws {
         let summary = try WatchSummary.decode(fixture())
         XCTAssertEqual(summary.nextPayday?.amountMinor, 210000)

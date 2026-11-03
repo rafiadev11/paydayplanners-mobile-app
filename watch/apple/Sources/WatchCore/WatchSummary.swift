@@ -31,7 +31,9 @@ public struct WatchSummary: Codable, Equatable, Sendable {
         bills.filter { (daysUntil($0.dueDate, now: now) ?? -1) >= 0 }
     }
     public func overdueNotice(now: Date = Date()) -> String? {
-        let count = overdueCount + bills.filter { !$0.overdue && (daysUntil($0.dueDate, now: now) ?? 0) < 0 }.count
+        var seen = Set<String>()
+        let knownBills = (bills + (reminderBills ?? [])).filter { seen.insert($0.id).inserted }
+        let count = overdueCount + knownBills.filter { !$0.overdue && (daysUntil($0.dueDate, now: now) ?? 0) < 0 }.count
         return count > 0 ? "\(count) overdue \(count == 1 ? "bill" : "bills") · review on phone" : nil
     }
     public var reminderSource: [Bill] { reminderBills ?? bills }
