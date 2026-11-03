@@ -153,19 +153,22 @@ private fun SummaryScreen(store: WatchStore) {
                         }
                     }
                 }
-                summary.bills.firstOrNull()?.let { bill ->
+                summary.upcomingBills(now).firstOrNull()?.let { bill ->
                     item { WatchCard("Next: ${bill.name}", "${summary.money(bill.amountMinor)} · ${summary.dueLabel(bill, now)}") { selectedBillID = bill.id } }
                 }
-                summary.warning?.let { warning ->
+                summary.warning?.takeIf { summary.daysUntil(it.dueDate, now) >= 0 }?.let { warning ->
                     item { WatchCard(if (summary.isStale(now)) "Saved funding estimate" else "Needs funding", "${warning.name} · ${summary.money(warning.unfundedMinor)} short", Amber) { selectedBillID = warning.id } }
                 }
                 summary.dueOnPaydayMinor?.takeIf { it > 0 }?.let { amount -> item { Text("Plus ${summary.money(amount)} due on payday", color = Muted, fontSize = 11.sp, textAlign = TextAlign.Center) } }
-                if (summary.bills.isEmpty()) item { Text("No unpaid bills", color = Mint, fontSize = 13.sp) }
-                summary.bills.drop(1).forEach { bill ->
+                if (summary.upcomingBills(now).isEmpty()) item { Text("No upcoming bills in this window", color = Mint, fontSize = 13.sp) }
+                summary.upcomingBills(now).drop(1).forEach { bill ->
                     item(key = bill.id) { WatchCard(bill.name, "${summary.money(bill.amountMinor)} · ${summary.dueLabel(bill, now)}") { selectedBillID = bill.id } }
                 }
+                summary.overdueNotice(now)?.let { notice ->
+                    item { Text(notice, color = Amber, fontSize = 11.sp, textAlign = TextAlign.Center) }
+                }
                 if (summary.totalBillCount > summary.bills.size) item {
-                    Text("Showing the next ${summary.bills.size} bills. See all on your phone.", color = Muted, fontSize = 11.sp, textAlign = TextAlign.Center)
+                    Text("Showing the next ${summary.upcomingBills(now).size} upcoming bills. See all on your phone.", color = Muted, fontSize = 11.sp, textAlign = TextAlign.Center)
                 }
             } else if (store.connected) {
                 item { Text(if (store.message == null) "Loading your plan" else "Plan unavailable", fontSize = 18.sp, textAlign = TextAlign.Center) }

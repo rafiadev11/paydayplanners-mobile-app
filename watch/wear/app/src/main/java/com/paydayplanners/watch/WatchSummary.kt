@@ -16,8 +16,13 @@ data class WatchSummary(
     val revision: Long, val generatedAt: Instant, val validUntil: Instant,
     val timezone: ZoneId, val currency: String, val nextPayday: WatchPayday?,
     val dueBeforePaydayMinor: Long?, val dueOnPaydayMinor: Long?,
-    val bills: List<WatchBill>, val warning: WatchBill?, val totalBillCount: Int, val reminderBills: List<WatchBill>? = null
+    val bills: List<WatchBill>, val warning: WatchBill?, val totalBillCount: Int, val reminderBills: List<WatchBill>? = null, val overdueCount: Int = 0
 ) {
+    fun upcomingBills(now: Instant = Instant.now()) = bills.filter { daysUntil(it.dueDate, now) >= 0 }
+    fun overdueNotice(now: Instant = Instant.now()): String? {
+        val count = overdueCount + bills.count { !it.overdue && daysUntil(it.dueDate, now) < 0 }
+        return if (count > 0) "$count overdue ${if (count == 1) "bill" else "bills"} · review on phone" else null
+    }
     val reminderSource get() = reminderBills ?: bills
     fun isStale(now: Instant = Instant.now()) = !now.isBefore(validUntil)
     fun daysUntil(date: String, now: Instant = Instant.now()): Long = ChronoUnit.DAYS.between(now.atZone(timezone).toLocalDate(), LocalDate.parse(date))
@@ -51,7 +56,8 @@ data class WatchSummary(
                 if (json.isNull("due_before_payday_minor")) null else json.getLong("due_before_payday_minor"),
                 if (json.isNull("due_on_payday_minor")) null else json.getLong("due_on_payday_minor"),
                 (0 until rows.length()).map { bill(rows.getJSONObject(it)) }, json.optJSONObject("funding_warning")?.let { bill(it) }, json.getInt("total_bill_count"),
-                json.optJSONArray("reminder_bills")?.let { reminders -> (0 until reminders.length()).map { bill(reminders.getJSONObject(it)) } }
+                json.optJSONArray("reminder_bills")?.let { reminders -> (0 until reminders.length()).map { bill(reminders.getJSONObject(it)) } },
+                json.optInt("overdue_count", 0)
             )
         }
     }

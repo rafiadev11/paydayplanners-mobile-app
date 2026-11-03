@@ -7,6 +7,17 @@ final class WatchSummaryTests: XCTestCase {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         return try Data(contentsOf: root.appendingPathComponent("contracts/summary-v1.json"))
     }
+    func testSeparatesOverdueNoticeAndAdvancesCachedCardsAtMidnight() throws {
+        var json = try JSONSerialization.jsonObject(with: fixture()) as! [String: Any]
+        json["overdue_count"] = 3
+        let summary = try WatchSummary.decode(JSONSerialization.data(withJSONObject: json))
+        let now = ISO8601DateFormatter().date(from: "2026-10-29T14:00:00Z")!
+        XCTAssertEqual(summary.upcomingBills(now: now).map(\.id), ["2"])
+        XCTAssertEqual(summary.overdueNotice(now: now), "4 overdue bills · review on phone")
+        let original = try WatchSummary.decode(fixture())
+        XCTAssertEqual(original.overdueNotice(now: now), "1 overdue bill · review on phone")
+        XCTAssertNil(original.overdueNotice(now: ISO8601DateFormatter().date(from: "2026-10-27T14:00:00Z")!))
+    }
     func testDecodesSharedContractWithoutRoundingMoney() throws {
         let summary = try WatchSummary.decode(fixture())
         XCTAssertEqual(summary.nextPayday?.amountMinor, 210000)

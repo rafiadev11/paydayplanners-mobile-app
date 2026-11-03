@@ -6,6 +6,15 @@ import java.time.Instant
 
 class WatchSummaryTest {
     private fun raw() = javaClass.classLoader!!.getResource("summary-v1.json")!!.readText()
+    @Test fun separatesOverdueNoticeAndAdvancesCachedCardsAtMidnight() {
+        val json = org.json.JSONObject(raw()).put("overdue_count", 3)
+        val summary = WatchSummary.decode(json.toString())
+        val now = Instant.parse("2026-10-29T14:00:00Z")
+        assertEquals(listOf("2"), summary.upcomingBills(now).map { it.id })
+        assertEquals("4 overdue bills · review on phone", summary.overdueNotice(now))
+        assertNull(summary.copy(overdueCount = 0).overdueNotice(Instant.parse("2026-10-27T14:00:00Z")))
+        assertEquals("1 overdue bill · review on phone", summary.copy(overdueCount = 0).overdueNotice(now))
+    }
     @Test fun readsSharedFinancialContract() {
         val summary = WatchSummary.decode(raw())
         assertEquals(210000L, summary.nextPayday!!.amountMinor)
