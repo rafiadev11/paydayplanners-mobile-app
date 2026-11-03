@@ -88,6 +88,36 @@ npm run ota:all
 `build:ipa`, `build:aab`, `build:apk`, `ship:ios`, `ship:android`, and `ship` require `version:check` to pass before they run.
 `ship:ios` and `ship` use EAS Submit once `submit.production.ios.ascAppId` is configured in `eas.json`.
 
+### Android release optimisation
+
+`expo-build-properties` enables R8 minification and resource shrinking for phone
+release builds. `plugins/with-android-optimization.cjs` selects the optimising
+ProGuard defaults during prebuild; keep these settings in Expo configuration,
+because `android/` is generated and ignored by Git.
+
+The additional keep rule preserves Expo's runtime Record annotations. Without
+it, R8 can optimise away annotation-backed field descriptors and break
+SecureStore argument conversion during sign-in (Expo issue
+https://github.com/expo/expo/issues/49081). Keep optimisation enabled and retain
+this narrow exception until an upstream fix is verified in a release build.
+
+Keep Expo notification classes implementing `Serializable` as well: scheduled
+notifications are persisted using Java serialization. Their class/field names,
+serial version IDs and private serialization hooks must survive R8 and remain
+stable across upgrades. Without these hooks, scheduling notification data fails
+with `NotSerializableException: org.json.JSONObject`.
+
+After changing optimisation settings, build and smoke-test a release (startup,
+sign-in, secure storage, notifications, and watch pairing). Check the generated
+`android/app/build/outputs/mapping/release/` reports and the new bundle's DEX
+scores in Play Console. These changes require a new native build and version code;
+an OTA update cannot change a bundle already under review. Local Gradle builds
+use the generated debug signing configuration and are for validation only;
+use the production EAS build profile for a store submission.
+When testing a local release against production, explicitly set
+`EXPO_PUBLIC_API_URL_ANDROID=https://paydayplanners.com` so `.env.local` does not
+direct the APK to the development server.
+
 ## Quality gates
 
 `npm test` runs the portable TypeScript unit suite. The native calendar layout
