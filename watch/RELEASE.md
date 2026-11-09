@@ -105,6 +105,10 @@ the watch app. On newer Wear OS versions the carousel editor may call Tiles
 - `npm run version:check`
 - `npm run watch:test:release`
 - Run Wear unit tests and lint from `watch/wear` with Java 17.
+- On a round Wear device, scroll the pairing screen, summary, bill details and
+  reminder settings with touch and the crown. Confirm the right-edge scroll
+  indicator tracks the list position without obscuring content. These screens
+  share the same list and indicator; keep both bound to the same state.
 - Inspect the iOS archive for an embedded Watch app with matching version/build
   numbers, companion identifier, icon, and valid distribution signatures.
 - Verify the AAB package, version code, watch hardware requirement and upload

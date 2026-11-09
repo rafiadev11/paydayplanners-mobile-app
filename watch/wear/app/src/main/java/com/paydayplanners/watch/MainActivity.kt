@@ -189,5 +189,7 @@ private fun SummaryScreen(store: WatchStore) {
                 summary?.let { item { Text("Updated ${DateTimeFormatter.ofPattern("h:mm a").withZone(it.timezone).format(it.generatedAt)}", color = Muted, fontSize = 10.sp) } }
             }
         }
+        // All watch screens share this list state, including pairing and bill details.
+        ScrollIndicator(state = state, modifier = Modifier.align(Alignment.CenterEnd))
     }
 }
