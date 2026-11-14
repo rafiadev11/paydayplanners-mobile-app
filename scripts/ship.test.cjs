@@ -1,6 +1,28 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { shipOta, verifyBuild, parseEasJson } = require("./ship.cjs");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { shipOta, verifyBuild, parseEasJson, runEas } = require("./ship.cjs");
+
+test("captures real fingerprint output larger than the default child-process buffer", () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "eas-output-test-"));
+  const originalPath = process.env.PATH;
+  try {
+    fs.writeFileSync(
+      path.join(directory, "eas"),
+      `#!${process.execPath}\nprocess.stdout.write(JSON.stringify({hash:"native",sources:"x".repeat(2*1024*1024)}));\n`,
+      { mode: 0o755 },
+    );
+    process.env.PATH = directory + path.delimiter + originalPath;
+    const metadata = runEas(["fingerprint:compare"], true, directory);
+    assert.equal(metadata.hash, "native");
+    assert.equal(metadata.sources.length, 2 * 1024 * 1024);
+  } finally {
+    process.env.PATH = originalPath;
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test("reads EAS JSON with environment notices but rejects malformed metadata", () => {
   const metadata = { fingerprint1: { hash: "native" } };
