@@ -10,6 +10,19 @@ function parseEasJson(output) {
   return JSON.parse(output.slice(start));
 }
 
+function runEas(args, json, root) {
+  const result = spawnSync("eas", args, {
+    cwd: root,
+    encoding: "utf8",
+    stdio: json ? ["ignore", "pipe", "inherit"] : "inherit",
+    maxBuffer: 16 * 1024 * 1024,
+    shell: false,
+  });
+  if (result.error || result.status !== 0)
+    throw new Error(`EAS ${args[0]} failed; nothing further was published.`);
+  return json ? parseEasJson(result.stdout) : undefined;
+}
+
 function verifyBuild(build, comparison, config, platform) {
   const hash = build?.fingerprint?.hash;
   if (
@@ -95,21 +108,10 @@ function main() {
   const config = JSON.parse(
     fs.readFileSync(path.join(root, "app.json"), "utf8"),
   ).expo;
-  const run = (args, json) => {
-    const result = spawnSync("eas", args, {
-      cwd: root,
-      encoding: "utf8",
-      stdio: json ? ["ignore", "pipe", "inherit"] : "inherit",
-      shell: false,
-    });
-    if (result.error || result.status !== 0)
-      throw new Error(`EAS ${args[0]} failed; nothing further was published.`);
-    return json ? parseEasJson(result.stdout) : undefined;
-  };
-  shipOta(platform, options, config, run);
+  shipOta(platform, options, config, (args, json) => runEas(args, json, root));
 }
 
-module.exports = { verifyBuild, shipOta, parseEasJson };
+module.exports = { verifyBuild, shipOta, parseEasJson, runEas };
 if (require.main === module) {
   try {
     main();
