@@ -3,6 +3,13 @@ const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 const fs = require("node:fs");
 
+function parseEasJson(output) {
+  // EAS may print an environment-loading notice before its JSON document.
+  const start = output.search(/^\s*[{[]/m);
+  if (start < 0) throw new Error("EAS did not return a JSON document.");
+  return JSON.parse(output.slice(start));
+}
+
 function verifyBuild(build, comparison, config, platform) {
   const hash = build?.fingerprint?.hash;
   if (
@@ -97,12 +104,12 @@ function main() {
     });
     if (result.error || result.status !== 0)
       throw new Error(`EAS ${args[0]} failed; nothing further was published.`);
-    return json ? JSON.parse(result.stdout) : undefined;
+    return json ? parseEasJson(result.stdout) : undefined;
   };
   shipOta(platform, options, config, run);
 }
 
-module.exports = { verifyBuild, shipOta };
+module.exports = { verifyBuild, shipOta, parseEasJson };
 if (require.main === module) {
   try {
     main();

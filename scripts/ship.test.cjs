@@ -1,6 +1,21 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { shipOta, verifyBuild } = require("./ship.cjs");
+const { shipOta, verifyBuild, parseEasJson } = require("./ship.cjs");
+
+test("reads EAS JSON with environment notices but rejects malformed metadata", () => {
+  const metadata = { fingerprint1: { hash: "native" } };
+  assert.deepEqual(parseEasJson(JSON.stringify(metadata)), metadata);
+  assert.deepEqual(
+    parseEasJson(
+      'Environment variables loaded from the "production" environment on EAS.\n\n' +
+        JSON.stringify(metadata, null, 2),
+    ),
+    metadata,
+  );
+  assert.throws(() => parseEasJson("EAS request failed"));
+  assert.throws(() => parseEasJson('Notice\n{"fingerprint1":'));
+  assert.throws(() => parseEasJson("{}\nUnexpected trailing output"));
+});
 const config = {
   version: "1.1.5",
   runtimeVersion: { policy: "appVersion" },
