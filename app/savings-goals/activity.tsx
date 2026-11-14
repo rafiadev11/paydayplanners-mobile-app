@@ -25,6 +25,7 @@ import {
   mergeContributionPage,
 } from "@features/goals/savings-paydays";
 import { GoalProgressBlock } from "@features/goals/goal-progress";
+import { createHistoryPagination } from "@features/goals/history-pagination";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   formatCurrencyPrecise,
@@ -54,7 +55,7 @@ export default function SavingsActivityScreen() {
   const [historyCursor, setHistoryCursor] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const historyLoading = useRef(false);
-  const loadGeneration = useRef(0);
+  const historyPagination = useRef(createHistoryPagination());
   const [visiblePaydays, setVisiblePaydays] = useState(6);
   const [planned, setPlanned] = useState<Planned[]>([]);
   const [form, setForm] = useState<{
@@ -78,14 +79,16 @@ export default function SavingsActivityScreen() {
     setForm({ paycheck, requestId: randomUUID() });
   }, []);
   const load = useCallback(async () => {
-    const generation = ++loadGeneration.current;
+    const generation = historyPagination.current.restart();
+    setHistoryCursor(null);
     try {
       const [nextGoal, entries, dashboard] = await Promise.all([
         fetchSavingsGoal(id),
         fetchSavingsContributions(id),
         fetchDashboard().catch(() => null),
       ]);
-      if (generation !== loadGeneration.current) return;
+      if (!historyPagination.current.commit(generation, entries.nextCursor))
+        return;
       setGoal(nextGoal);
       setHistoryCursor(entries.nextCursor);
       setHistory(entries.entries);
@@ -107,22 +110,25 @@ export default function SavingsActivityScreen() {
         openForm();
       }
     } catch (e) {
-      if (generation === loadGeneration.current)
+      if (historyPagination.current.isCurrent(generation))
         setError(getApiErrorMessage(e));
     }
   }, [id, add, openForm]);
   const loadMoreHistory = async () => {
-    if (historyLoading.current || busy || !historyCursor) return;
+    if (historyLoading.current || busy) return;
+    const request = historyPagination.current.nextPage();
+    if (!request) return;
     historyLoading.current = true;
     setLoadingHistory(true);
-    const generation = loadGeneration.current;
+    const { generation, cursor } = request;
     try {
-      const page = await fetchSavingsContributions(id, historyCursor);
-      if (generation !== loadGeneration.current) return;
+      const page = await fetchSavingsContributions(id, cursor);
+      if (!historyPagination.current.commit(generation, page.nextCursor))
+        return;
       setHistory((current) => mergeContributionPage(current, page.entries));
       setHistoryCursor(page.nextCursor);
     } catch (e) {
-      if (generation === loadGeneration.current)
+      if (historyPagination.current.isCurrent(generation))
         setError(getApiErrorMessage(e));
     } finally {
       historyLoading.current = false;
@@ -133,7 +139,7 @@ export default function SavingsActivityScreen() {
     useCallback(() => {
       void load();
       return () => {
-        loadGeneration.current += 1;
+        historyPagination.current.restart();
       };
     }, [load]),
   );
