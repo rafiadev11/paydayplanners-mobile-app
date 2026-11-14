@@ -8,13 +8,15 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { AppState, Platform, type AppStateStatus } from "react-native";
 
+import { retryRead } from "@shared/lib/refresh-coordinator";
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      gcTime: 1000 * 60 * 60 * 24,
+      gcTime: 1000 * 60 * 30,
       networkMode: "offlineFirst",
       refetchOnReconnect: true,
-      retry: 1,
+      retry: retryRead,
       staleTime: 1000 * 60,
     },
     mutations: {

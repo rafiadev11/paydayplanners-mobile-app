@@ -17,3 +17,12 @@ export function savingsPaydays(
   }
   return [...unique.values()];
 }
+
+export function mergeContributionPage(
+  current: SavingsContribution[],
+  next: SavingsContribution[],
+) {
+  const rows = new Map(current.map((entry) => [entry.id, entry]));
+  for (const entry of next) rows.set(entry.id, entry);
+  return [...rows.values()];
+}

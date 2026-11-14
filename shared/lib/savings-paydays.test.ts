@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { it } from "node:test";
-import { savingsPaydays } from "@features/goals/savings-paydays";
+import {
+  savingsPaydays,
+  mergeContributionPage,
+} from "@features/goals/savings-paydays";
 
 it("keeps an unconfirmed past payday available alongside future plans", () => {
   const recent = {
@@ -33,4 +36,21 @@ it("hides confirmed paydays, removes overlapping plans, and restores undone entr
   ];
   assert.deepEqual(savingsPaydays([payday], [payday], history), []);
   assert.deepEqual(savingsPaydays([payday], [payday], []), [payday]);
+});
+
+it("merges overlapping history pages without losing entries or duplicating undo buttons", () => {
+  const first = {
+    id: 3,
+    amount: "10.00",
+    saved_on: "2026-04-03",
+    paycheck_occurrence_id: null,
+    note: null,
+  };
+  const overlapping = { ...first, id: 2, saved_on: "2026-04-02" };
+  const last = { ...first, id: 1, saved_on: "2026-04-01" };
+  const updated = { ...overlapping, amount: "20.00" };
+  assert.deepEqual(
+    mergeContributionPage([first, overlapping], [updated, last]),
+    [first, updated, last],
+  );
 });

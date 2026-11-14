@@ -66,7 +66,7 @@ export function useDashboardQuery(scope: PlanningScope, gate?: QueryGate) {
   return useQuery({
     enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
-    queryFn: fetchDashboard,
+    queryFn: ({ signal }) => fetchDashboard(signal),
     queryKey: planningKeys.dashboard(scope),
   });
 }
@@ -79,7 +79,7 @@ export function useForecastWindowQuery(
   return useQuery({
     enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
-    queryFn: () => fetchForecastWindow(window),
+    queryFn: ({ signal }) => fetchForecastWindow(window, signal),
     queryKey: planningKeys.forecastWindow(scope, window),
   });
 }
@@ -88,7 +88,7 @@ export function useBillsQuery(scope: PlanningScope, gate?: QueryGate) {
   return useQuery({
     enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
-    queryFn: fetchBills,
+    queryFn: ({ signal }) => fetchBills(signal),
     queryKey: planningKeys.bills(scope),
   });
 }
@@ -97,7 +97,7 @@ export function usePaySchedulesQuery(scope: PlanningScope, gate?: QueryGate) {
   return useQuery({
     enabled: enabled(scope, gate),
     placeholderData: keepPreviousData,
-    queryFn: fetchPaySchedules,
+    queryFn: ({ signal }) => fetchPaySchedules(signal),
     queryKey: planningKeys.paySchedules(scope),
   });
 }
@@ -109,7 +109,7 @@ export function usePaycheckOccurrencesQuery(
   return useQuery({
     enabled: enabled(scope),
     placeholderData: keepPreviousData,
-    queryFn: () => fetchPaycheckOccurrences(days),
+    queryFn: ({ signal }) => fetchPaycheckOccurrences(days, signal),
     queryKey: planningKeys.paycheckOccurrences(scope, days),
   });
 }
@@ -118,7 +118,7 @@ export function useSavingsGoalsQuery(scope: PlanningScope) {
   return useQuery({
     enabled: enabled(scope),
     placeholderData: keepPreviousData,
-    queryFn: fetchSavingsGoals,
+    queryFn: ({ signal }) => fetchSavingsGoals(signal),
     queryKey: planningKeys.savingsGoals(scope),
   });
 }
@@ -131,7 +131,7 @@ export function prefetchPlanningQueries(
 
   return Promise.allSettled([
     queryClient.prefetchQuery({
-      queryFn: fetchDashboard,
+      queryFn: ({ signal }) => fetchDashboard(signal),
       queryKey: planningKeys.dashboard(scope),
     }),
   ]).then(() => undefined);

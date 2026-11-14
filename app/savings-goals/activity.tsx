@@ -20,7 +20,10 @@ import {
   type SavingsGoal,
   type SavingsContribution,
 } from "@features/planning/api";
-import { savingsPaydays } from "@features/goals/savings-paydays";
+import {
+  savingsPaydays,
+  mergeContributionPage,
+} from "@features/goals/savings-paydays";
 import { GoalProgressBlock } from "@features/goals/goal-progress";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
@@ -48,6 +51,10 @@ export default function SavingsActivityScreen() {
   const router = useRouter();
   const [goal, setGoal] = useState<SavingsGoal | null>(null);
   const [history, setHistory] = useState<SavingsContribution[]>([]);
+  const [historyCursor, setHistoryCursor] = useState<string | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const historyLoading = useRef(false);
+  const loadGeneration = useRef(0);
   const [visiblePaydays, setVisiblePaydays] = useState(6);
   const [planned, setPlanned] = useState<Planned[]>([]);
   const [form, setForm] = useState<{
@@ -71,13 +78,16 @@ export default function SavingsActivityScreen() {
     setForm({ paycheck, requestId: randomUUID() });
   }, []);
   const load = useCallback(async () => {
+    const generation = ++loadGeneration.current;
     try {
       const [nextGoal, entries, dashboard] = await Promise.all([
         fetchSavingsGoal(id),
         fetchSavingsContributions(id),
         fetchDashboard().catch(() => null),
       ]);
+      if (generation !== loadGeneration.current) return;
       setGoal(nextGoal);
+      setHistoryCursor(entries.nextCursor);
       setHistory(entries.entries);
       setPlanned(
         savingsPaydays(
@@ -97,12 +107,34 @@ export default function SavingsActivityScreen() {
         openForm();
       }
     } catch (e) {
-      setError(getApiErrorMessage(e));
+      if (generation === loadGeneration.current)
+        setError(getApiErrorMessage(e));
     }
   }, [id, add, openForm]);
+  const loadMoreHistory = async () => {
+    if (historyLoading.current || busy || !historyCursor) return;
+    historyLoading.current = true;
+    setLoadingHistory(true);
+    const generation = loadGeneration.current;
+    try {
+      const page = await fetchSavingsContributions(id, historyCursor);
+      if (generation !== loadGeneration.current) return;
+      setHistory((current) => mergeContributionPage(current, page.entries));
+      setHistoryCursor(page.nextCursor);
+    } catch (e) {
+      if (generation === loadGeneration.current)
+        setError(getApiErrorMessage(e));
+    } finally {
+      historyLoading.current = false;
+      setLoadingHistory(false);
+    }
+  };
   useFocusEffect(
     useCallback(() => {
       void load();
+      return () => {
+        loadGeneration.current += 1;
+      };
     }, [load]),
   );
   const save = async () => {
@@ -344,6 +376,13 @@ export default function SavingsActivityScreen() {
               />
             </View>
           ))}
+          {historyCursor && (
+            <SecondaryButton
+              label={loadingHistory ? "Loading history…" : "Show more history"}
+              disabled={busy || loadingHistory}
+              onPress={() => void loadMoreHistory()}
+            />
+          )}
         </SurfaceCard>
       </ScrollView>
     </KeyboardAvoidingView>
