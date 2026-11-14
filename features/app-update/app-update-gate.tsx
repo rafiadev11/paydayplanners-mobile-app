@@ -19,6 +19,7 @@ import {
   type MobileUpdatePolicy,
 } from "@features/app-update/api";
 import { appUpdateDismissalStorage } from "@shared/storage/secure";
+import { createRefreshCoordinator } from "@shared/lib/refresh-coordinator";
 import { theme, withAlpha } from "@shared/ui/theme";
 
 function UpdateButton({
@@ -63,6 +64,9 @@ function UpdateButton({
 export function AppUpdateGate() {
   const [policy, setPolicy] = useState<MobileUpdatePolicy | null>(null);
   const checkingRef = useRef(false);
+  const refresh = useRef(
+    createRefreshCoordinator<MobileUpdatePolicy | null>(30_000),
+  );
 
   const checkPolicy = useCallback(async () => {
     if (checkingRef.current) return;
@@ -70,7 +74,10 @@ export function AppUpdateGate() {
     checkingRef.current = true;
 
     try {
-      const nextPolicy = await fetchMobileUpdatePolicy();
+      const nextPolicy = await refresh.current.run(
+        "policy",
+        fetchMobileUpdatePolicy,
+      );
 
       if (!nextPolicy || nextPolicy.status === "current") {
         setPolicy(null);

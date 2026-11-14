@@ -412,8 +412,10 @@ function buildWindow(days = 365) {
   };
 }
 
-export async function fetchDashboard() {
-  const { data } = await api.get<DashboardResponse>("/api/v1/dashboard");
+export async function fetchDashboard(signal?: AbortSignal) {
+  const { data } = await api.get<DashboardResponse>("/api/v1/dashboard", {
+    signal,
+  });
   return data;
 }
 
@@ -454,16 +456,21 @@ export type ForecastWindow = {
  * render the days already gone by in the current month, so the calendar names
  * its own start date.
  */
-export async function fetchForecastWindow(window: ForecastWindow) {
+export async function fetchForecastWindow(
+  window: ForecastWindow,
+  signal?: AbortSignal,
+) {
   const { data } = await api.get<ForecastResponse>("/api/v1/forecast", {
     params: window,
+    signal,
   });
   return data;
 }
 
-export async function fetchPaySchedules() {
+export async function fetchPaySchedules(signal?: AbortSignal) {
   const { data } = await api.get<CollectionEnvelope<PaySchedule>>(
     "/api/v1/pay-schedules",
+    { signal },
   );
   return collection(data);
 }
@@ -476,8 +483,10 @@ export async function fetchPaySchedule(id: number | string) {
   return item(data);
 }
 
-export async function fetchBills() {
-  const { data } = await api.get<CollectionEnvelope<Bill>>("/api/v1/bills");
+export async function fetchBills(signal?: AbortSignal) {
+  const { data } = await api.get<CollectionEnvelope<Bill>>("/api/v1/bills", {
+    signal,
+  });
   return collection(data);
 }
 
@@ -495,9 +504,10 @@ export async function fetchBillCategories() {
   return collection(data);
 }
 
-export async function fetchSavingsGoals() {
+export async function fetchSavingsGoals(signal?: AbortSignal) {
   const { data } = await api.get<CollectionEnvelope<SavingsGoal>>(
     "/api/v1/savings-goals",
+    { signal },
   );
   return collection(data);
 }
@@ -510,21 +520,26 @@ export async function fetchSavingsGoal(id: number | string) {
   return item(data);
 }
 
-export async function fetchPaycheckOccurrences(days = 365) {
+export async function fetchPaycheckOccurrences(
+  days = 365,
+  signal?: AbortSignal,
+) {
   const { data } = await api.get<CollectionEnvelope<PaycheckOccurrence>>(
     "/api/v1/paycheck-occurrences",
     {
       params: buildWindow(days),
+      signal,
     },
   );
   return collection(data);
 }
 
-export async function fetchBillOccurrences(days = 365) {
+export async function fetchBillOccurrences(days = 365, signal?: AbortSignal) {
   const { data } = await api.get<CollectionEnvelope<BillOccurrence>>(
     "/api/v1/bill-occurrences",
     {
       params: buildWindow(days),
+      signal,
     },
   );
   return collection(data);
@@ -649,15 +664,23 @@ export type SavingsContribution = {
   paycheck_occurrence_id: number | null;
   note: string | null;
 };
-export async function fetchSavingsContributions(id: string | number) {
+export async function fetchSavingsContributions(
+  id: string | number,
+  cursor?: string,
+) {
   const { data } = await api.get<
     CollectionEnvelope<SavingsContribution> & {
       recent_paychecks?: NonNullable<SavingsGoal["contributions"]>;
+      next_page_url?: string | null;
+      next_cursor?: string | null;
     }
-  >(`/api/v1/savings-goals/${id}/contributions`);
+  >(`/api/v1/savings-goals/${id}/contributions`, {
+    params: { per_page: 50, cursor },
+  });
   return {
     entries: collection(data),
     recentPaychecks: data.recent_paychecks ?? [],
+    nextCursor: data.next_cursor ?? null,
   };
 }
 export async function recordSavingsContribution(

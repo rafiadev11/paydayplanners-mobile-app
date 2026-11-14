@@ -1,71 +1,120 @@
 /* global __dirname */
+const { spawnSync } = require("node:child_process");
+const path = require("node:path");
+const fs = require("node:fs");
 
-const { spawnSync } = require("child_process");
-const fs = require("fs");
-const path = require("path");
-
-const validPlatforms = new Set(["ios", "android", "all"]);
-const platform = (process.argv[2] || "").trim();
-
-if (!validPlatforms.has(platform)) {
-  console.error("Usage: node scripts/ship.cjs <ios|android|all>");
-  process.exit(1);
+function parseEasJson(output) {
+  // EAS may print an environment-loading notice before its JSON document.
+  const start = output.search(/^\s*[{[]/m);
+  if (start < 0) throw new Error("EAS did not return a JSON document.");
+  return JSON.parse(output.slice(start));
 }
 
-const root = path.resolve(__dirname, "..");
-const easConfigPath = path.join(root, "eas.json");
-const easConfig = JSON.parse(fs.readFileSync(easConfigPath, "utf8"));
-
-const submitConfig = easConfig.submit?.production ?? {};
-const hasIosAutoSubmit = Boolean(submitConfig.ios?.ascAppId);
-const hasAndroidAutoSubmit = Boolean(submitConfig.android);
-
-function runEasBuild(targetPlatform, autoSubmit) {
-  const args = [
-    "build",
-    "--platform",
-    targetPlatform,
-    "--profile",
-    "production",
-  ];
-
-  if (autoSubmit) args.push("--auto-submit");
-
-  console.log(
-    ["Running:", "eas", ...args, autoSubmit ? "" : "(without auto-submit)"]
-      .filter(Boolean)
-      .join(" "),
-  );
-
-  const result = spawnSync("eas", args, {
-    cwd: root,
-    stdio: "inherit",
-    shell: false,
-  });
-
-  if (typeof result.status === "number") return result.status;
-  return 1;
-}
-
-function buildSingle(targetPlatform) {
-  const autoSubmit =
-    targetPlatform === "ios" ? hasIosAutoSubmit : hasAndroidAutoSubmit;
-
-  if (targetPlatform === "ios" && !autoSubmit) {
-    console.log(
-      "iOS auto-submit is not configured in eas.json. Building production without auto-submit.",
+function verifyBuild(build, comparison, config, platform) {
+  const hash = build?.fingerprint?.hash;
+  if (
+    build?.status !== "FINISHED" ||
+    build?.platform?.toLowerCase() !== platform ||
+    build?.app?.id !== config.extra?.eas?.projectId ||
+    build?.updateChannel?.name !== "production" ||
+    build?.distribution !== "STORE" ||
+    build?.isForIosSimulator === true ||
+    config.runtimeVersion?.policy !== "appVersion" ||
+    build?.runtime?.version !== config.version ||
+    !hash ||
+    comparison?.fingerprint1?.hash !== hash ||
+    comparison?.fingerprint2?.hash !== hash
+  ) {
+    throw new Error(
+      `Cannot verify ${platform} OTA compatibility. Select the installed production build; native changes require a new runtime and native build.`,
     );
   }
-
-  return runEasBuild(targetPlatform, autoSubmit);
 }
 
-if (platform === "all") {
-  const iosCode = buildSingle("ios");
-  if (iosCode !== 0) process.exit(iosCode);
-
-  const androidCode = buildSingle("android");
-  process.exit(androidCode);
+function shipOta(platform, options, config, run) {
+  if (!["ios", "android", "all"].includes(platform))
+    throw new Error("Choose ios, android, or all.");
+  const targets = platform === "all" ? ["ios", "android"] : [platform];
+  for (const target of targets) {
+    const id = options[`${target}-build`];
+    if (!id)
+      throw new Error(
+        `Provide --${target}-build=<installed production EAS build ID>. Use --native only when a new native runtime is required.`,
+      );
+  }
+  for (const target of targets) {
+    const id = options[`${target}-build`];
+    const build = run(["build:view", id, "--json"], true);
+    const comparison = run(
+      [
+        "fingerprint:compare",
+        "--build-id",
+        id,
+        "--environment",
+        "production",
+        "--json",
+        "--non-interactive",
+      ],
+      true,
+    );
+    verifyBuild(build, comparison, config, target);
+  }
+  return run(
+    [
+      "update",
+      "--platform",
+      platform,
+      "--channel",
+      "production",
+      "--environment",
+      "production",
+      "--message",
+      options.message || "Production update",
+      "--non-interactive",
+    ],
+    false,
+  );
 }
 
-process.exit(buildSingle(platform));
+function main() {
+  const platform = process.argv[2];
+  const flags = process.argv.slice(3);
+  if (flags.includes("--native")) {
+    if (flags.length !== 1)
+      throw new Error("Do not combine --native with OTA options.");
+    require("./ship-native.cjs");
+    return;
+  }
+  const options = {};
+  for (const flag of flags) {
+    const match = /^--(ios-build|android-build|message)=(.+)$/.exec(flag);
+    if (!match) throw new Error(`Unknown option: ${flag}`);
+    options[match[1]] = match[2];
+  }
+  const root = path.resolve(__dirname, "..");
+  const config = JSON.parse(
+    fs.readFileSync(path.join(root, "app.json"), "utf8"),
+  ).expo;
+  const run = (args, json) => {
+    const result = spawnSync("eas", args, {
+      cwd: root,
+      encoding: "utf8",
+      stdio: json ? ["ignore", "pipe", "inherit"] : "inherit",
+      shell: false,
+    });
+    if (result.error || result.status !== 0)
+      throw new Error(`EAS ${args[0]} failed; nothing further was published.`);
+    return json ? parseEasJson(result.stdout) : undefined;
+  };
+  shipOta(platform, options, config, run);
+}
+
+module.exports = { verifyBuild, shipOta, parseEasJson };
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  }
+}

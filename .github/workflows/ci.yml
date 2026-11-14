@@ -50,6 +50,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: OTA runtime safeguards
+        run: node --test scripts/ship.test.cjs
+
       - name: Watch packaging and shortcut regression checks
         run: npm run watch:test:release
 

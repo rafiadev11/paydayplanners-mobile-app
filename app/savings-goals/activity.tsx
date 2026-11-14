@@ -20,8 +20,12 @@ import {
   type SavingsGoal,
   type SavingsContribution,
 } from "@features/planning/api";
-import { savingsPaydays } from "@features/goals/savings-paydays";
+import {
+  savingsPaydays,
+  mergeContributionPage,
+} from "@features/goals/savings-paydays";
 import { GoalProgressBlock } from "@features/goals/goal-progress";
+import { createHistoryPagination } from "@features/goals/history-pagination";
 import { getApiErrorMessage } from "@shared/lib/api-error";
 import {
   formatCurrencyPrecise,
@@ -48,6 +52,10 @@ export default function SavingsActivityScreen() {
   const router = useRouter();
   const [goal, setGoal] = useState<SavingsGoal | null>(null);
   const [history, setHistory] = useState<SavingsContribution[]>([]);
+  const [historyCursor, setHistoryCursor] = useState<string | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const historyLoading = useRef(false);
+  const historyPagination = useRef(createHistoryPagination());
   const [visiblePaydays, setVisiblePaydays] = useState(6);
   const [planned, setPlanned] = useState<Planned[]>([]);
   const [form, setForm] = useState<{
@@ -71,13 +79,18 @@ export default function SavingsActivityScreen() {
     setForm({ paycheck, requestId: randomUUID() });
   }, []);
   const load = useCallback(async () => {
+    const generation = historyPagination.current.restart();
+    setHistoryCursor(null);
     try {
       const [nextGoal, entries, dashboard] = await Promise.all([
         fetchSavingsGoal(id),
         fetchSavingsContributions(id),
         fetchDashboard().catch(() => null),
       ]);
+      if (!historyPagination.current.commit(generation, entries.nextCursor))
+        return;
       setGoal(nextGoal);
+      setHistoryCursor(entries.nextCursor);
       setHistory(entries.entries);
       setPlanned(
         savingsPaydays(
@@ -97,12 +110,37 @@ export default function SavingsActivityScreen() {
         openForm();
       }
     } catch (e) {
-      setError(getApiErrorMessage(e));
+      if (historyPagination.current.isCurrent(generation))
+        setError(getApiErrorMessage(e));
     }
   }, [id, add, openForm]);
+  const loadMoreHistory = async () => {
+    if (historyLoading.current || busy) return;
+    const request = historyPagination.current.nextPage();
+    if (!request) return;
+    historyLoading.current = true;
+    setLoadingHistory(true);
+    const { generation, cursor } = request;
+    try {
+      const page = await fetchSavingsContributions(id, cursor);
+      if (!historyPagination.current.commit(generation, page.nextCursor))
+        return;
+      setHistory((current) => mergeContributionPage(current, page.entries));
+      setHistoryCursor(page.nextCursor);
+    } catch (e) {
+      if (historyPagination.current.isCurrent(generation))
+        setError(getApiErrorMessage(e));
+    } finally {
+      historyLoading.current = false;
+      setLoadingHistory(false);
+    }
+  };
   useFocusEffect(
     useCallback(() => {
       void load();
+      return () => {
+        historyPagination.current.restart();
+      };
     }, [load]),
   );
   const save = async () => {
@@ -344,6 +382,13 @@ export default function SavingsActivityScreen() {
               />
             </View>
           ))}
+          {historyCursor && (
+            <SecondaryButton
+              label={loadingHistory ? "Loading history…" : "Show more history"}
+              disabled={busy || loadingHistory}
+              onPress={() => void loadMoreHistory()}
+            />
+          )}
         </SurfaceCard>
       </ScrollView>
     </KeyboardAvoidingView>

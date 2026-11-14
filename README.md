@@ -67,26 +67,39 @@ Use `npm run dev` for local endpoints and `npm run prod` for production endpoint
 
 ## Release commands
 
+Use OTA updates for changes compatible with the installed native runtime:
+
 ```bash
-npm run build:ios:preview
-npm run build:android:preview
-npm run version:set -- 1.0.1
-npm run version:check
-npm run build:ipa
-npm run build:aab
-npm run build:apk
-npm run ship:ios
-npm run ship:android
-npm run ship
-npm run ota
-npm run ota:ios
-npm run ota:android
-npm run ota:all
+npm run ship:ios -- --ios-build=<installed-production-build-id> --message="Release description"
+npm run ship:android -- --android-build=<installed-production-build-id> --message="Release description"
+npm run ship -- --ios-build=<installed-ios-build-id> --android-build=<installed-android-build-id>
+```
+
+`ship` checks each supplied build's project, platform, production channel, store
+status, runtime version, and native fingerprint against the local project using
+EAS's production environment. Both platforms must pass before an `all` update is
+published. Missing metadata or a mismatch blocks publishing; it never silently
+starts a paid native build. Use the EAS build IDs of the versions actually
+released to users, not merely the latest completed builds.
+
+Native code, dependencies, permissions, or native configuration changes require
+a new runtime and store build. With the `appVersion` runtime policy, increment
+the app version for these changes, then explicitly request the native build:
+
+```bash
+npm run version:set -- 1.1.6
+npm run ship:ios -- --native
+npm run ship:android -- --native
 ```
 
 `version:set` updates `app.json`, `package.json`, and `package-lock.json` together.
-`build:ipa`, `build:aab`, `build:apk`, `ship:ios`, `ship:android`, and `ship` require `version:check` to pass before they run.
-`ship:ios` and `ship` use EAS Submit once `submit.production.ios.ascAppId` is configured in `eas.json`.
+All `ship` commands run `version:check`. Explicit native shipping retains the
+existing EAS Submit configuration. Preview and explicit `build:*` commands remain
+available. The lower-level `ota:*` commands also remain available, but do not run
+the compatibility preflight; prefer `ship` for production releases.
+
+Run `node --test scripts/ship.test.cjs` to verify the release guards without
+contacting EAS or publishing anything.
 
 ### Android release optimisation
 
