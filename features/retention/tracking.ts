@@ -35,7 +35,6 @@ export function trackRetention(name: RetentionEventName) {
     __DEV__ ||
     !currentToken ||
     !unlocked ||
-    AppState.currentState !== "active" ||
     (Platform.OS !== "ios" && Platform.OS !== "android")
   )
     return;
@@ -49,8 +48,9 @@ export function trackRetention(name: RetentionEventName) {
     platform: Platform.OS,
     app_version: Constants.expoConfig?.version ?? "unknown",
   });
-  void queue.flush();
+  flushRetention();
 }
 export function flushRetention() {
+  if (!currentToken || !unlocked || AppState.currentState !== "active") return;
   void queue.flush();
 }

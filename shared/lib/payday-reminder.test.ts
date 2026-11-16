@@ -75,3 +75,64 @@ test("notification routes are owned by the signed in account and cannot supply a
     { pathname: "/calendar", params: { date: "2026-11-17" } },
   );
 });
+
+test("cold-start cleanup preserves the current account reminders for offline use", async () => {
+  const { clearPaydayNotifications } =
+    await import("../../features/notifications/payday-notification-store");
+  const scheduled = new Map([
+    [
+      "current",
+      {
+        identifier: "current",
+        content: { data: { type: "payday-reminder", userId: "A" } },
+      },
+    ],
+    [
+      "previous",
+      {
+        identifier: "previous",
+        content: { data: { type: "payday-reminder", userId: "B" } },
+      },
+    ],
+    [
+      "bill",
+      {
+        identifier: "bill",
+        content: { data: { type: "bill-reminder", userId: "A" } },
+      },
+    ],
+  ]);
+  const notifications = {
+    getAllScheduledNotificationsAsync: async () => [...scheduled.values()],
+    cancelScheduledNotificationAsync: async (id: string) => {
+      scheduled.delete(id);
+    },
+  };
+  await clearPaydayNotifications(notifications, "A");
+  assert.deepEqual([...scheduled.keys()], ["current", "bill"]);
+  await clearPaydayNotifications(notifications);
+  assert.deepEqual([...scheduled.keys()], ["bill"]);
+});
+
+test("older bill schedules cannot overflow the shared iPhone notification budget", async () => {
+  const { paydayNotificationCapacity } =
+    await import("../../features/notifications/payday-notification-store");
+  const bill = {
+    identifier: "bill",
+    content: { data: { type: "bill-reminder" } },
+  };
+  const payday = {
+    identifier: "payday",
+    content: { data: { type: "payday-reminder" } },
+  };
+  assert.equal(paydayNotificationCapacity(Array(60).fill(bill)), 0);
+  assert.equal(
+    paydayNotificationCapacity([
+      ...Array(45).fill(bill),
+      ...Array(10).fill(payday),
+    ]),
+    15,
+  );
+  assert.equal(paydayNotificationCapacity(Array(40).fill(bill)), 20);
+  assert.equal(paydayNotificationCapacity([]), 20);
+});
