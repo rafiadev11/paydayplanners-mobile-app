@@ -1,3 +1,7 @@
+import {
+  clearPaydayNotifications,
+  paydayNotificationCapacity,
+} from "./payday-notification-store";
 import { useBillReminders } from "./bill-reminder-context";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
@@ -25,13 +29,8 @@ import {
 
 const TYPE = "payday-reminder";
 const keyFor = (id: string) => `paydayplanners.payday_reminders.${id}`;
-async function cancelPaydayNotifications() {
-  const requests = await Notifications.getAllScheduledNotificationsAsync();
-  await Promise.all(
-    requests
-      .filter((r) => r.content.data?.type === TYPE)
-      .map((r) => Notifications.cancelScheduledNotificationAsync(r.identifier)),
-  );
+async function cancelPaydayNotifications(preserveUserId?: string) {
+  await clearPaydayNotifications(Notifications, preserveUserId);
 }
 type ContextValue = {
   preferences: PaydayPreferences;
@@ -87,11 +86,11 @@ export function PaydayReminderProvider({ children }: { children: ReactNode }) {
       }
       const paychecks = await fetchPaycheckOccurrences(365);
       if (!valid()) return;
-      const groups = buildPaydayReminders(paychecks, prefs);
+      const requests = await Notifications.getAllScheduledNotificationsAsync();
+      const capacity = paydayNotificationCapacity(requests);
+      const groups = buildPaydayReminders(paychecks, prefs).slice(0, capacity);
       const fingerprint = JSON.stringify([owner, getAppTimezone(), groups]);
-      const existing = (
-        await Notifications.getAllScheduledNotificationsAsync()
-      ).filter((r) => r.content.data?.type === TYPE);
+      const existing = requests.filter((r) => r.content.data?.type === TYPE);
       if (!valid()) return;
       if (
         lastFingerprint.current === fingerprint &&
@@ -129,7 +128,9 @@ export function PaydayReminderProvider({ children }: { children: ReactNode }) {
         setMessage(
           created.length
             ? `${created.length} payday reminders scheduled. Future dates refresh when you use the app.`
-            : "No upcoming reminders yet. Add a future payday or choose a later reminder time.",
+            : capacity === 0
+              ? "This device’s reminder slots are full. Refresh bill reminders, then try again."
+              : "No upcoming reminders yet. Add a future payday or choose a later reminder time.",
         );
       } catch (error) {
         await Promise.all(
@@ -151,7 +152,7 @@ export function PaydayReminderProvider({ children }: { children: ReactNode }) {
     setMessage(null);
     lastFingerprint.current = "";
     void enqueue(async () => {
-      await cancelPaydayNotifications();
+      await cancelPaydayNotifications(id ?? undefined);
       if (!id || currentId.current !== id || generation.current !== epoch)
         return;
       if (Platform.OS === "android")
