@@ -1,3 +1,4 @@
+import { setRetentionSession } from "@features/retention/tracking";
 import axios, { type AxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
 
@@ -19,6 +20,7 @@ let token: string | null = null;
 
 export async function setAuthToken(next: string | null) {
   token = next;
+  setRetentionSession(next);
 
   if (next) {
     await tokenStorage.set(next);

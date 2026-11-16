@@ -1,5 +1,4 @@
 import * as Notifications from "expo-notifications";
-import { useRouter } from "expo-router";
 import {
   createContext,
   useContext,
@@ -41,7 +40,7 @@ const BILL_REMINDER_CHANNEL_ID = "bill-reminders";
 const BILL_REMINDER_HOUR = 9;
 const BILL_REMINDER_MINUTE = 0;
 const BILL_REMINDER_WINDOW_DAYS = 365;
-const MAX_SCHEDULED_REMINDER_GROUPS = 60;
+const MAX_SCHEDULED_REMINDER_GROUPS = 40;
 const BILL_REMINDER_NOTIFICATION_TYPE = "bill-reminder";
 
 type PermissionState =
@@ -408,7 +407,6 @@ function reminderSyncMessage(
 }
 
 export function BillReminderProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const { ready, user } = useAuth();
   const previousUserIdRef = useRef<string | null>(null);
   const [enabled, setEnabled] = useState(false);
@@ -426,24 +424,6 @@ export function BillReminderProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void ensureNotificationChannel();
   }, []);
-
-  useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const screen = response.notification.request.content.data?.screen;
-
-        // Reminders scheduled before bills moved into Money still carry the
-        // old screen value, so both spellings have to land in the same place.
-        if (screen === "/bills" || screen === "/money?tab=bills") {
-          router.push("/money?tab=bills");
-        }
-      },
-    );
-
-    return () => {
-      subscription.remove();
-    };
-  }, [router]);
 
   useEffect(() => {
     let active = true;

@@ -1,3 +1,4 @@
+import { trackRetention } from "@features/retention/tracking";
 import { api } from "@shared/api/client";
 import { addDaysToIsoDate, todayInAppTimezone } from "@shared/lib/timezone";
 
@@ -608,6 +609,7 @@ export async function updateBillOccurrenceStatus(
   const { data } = await api.patch<
     ItemEnvelope<BillOccurrence> | BillOccurrence
   >(`/api/v1/bill-occurrences/${id}`, { status });
+  if (status === "paid") trackRetention("bill_marked_paid");
 
   return item(data);
 }
