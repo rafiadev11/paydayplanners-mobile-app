@@ -1,3 +1,8 @@
+import { usePaydayReminders } from "@features/notifications/payday-reminder-context";
+import { useIsFocused } from "@react-navigation/native";
+import { AppState } from "react-native";
+import { useBiometricLock } from "@features/security/biometric-lock-context";
+import { trackRetention } from "@features/retention/tracking";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -46,6 +51,7 @@ function outstandingCount(items: BillOccurrence[] | undefined) {
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const paydayReminders = usePaydayReminders();
   const { user, signOut } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const planningRevision = usePlanningRevision();
@@ -102,6 +108,29 @@ export default function DashboardScreen() {
         isFirstOpen,
       })
     : null;
+
+  const focused = useIsFocused();
+  const biometric = useBiometricLock();
+  useEffect(() => {
+    const record = () => {
+      if (
+        focused &&
+        biometric.ready &&
+        !(biometric.enabled && biometric.locked) &&
+        heroState?.kind === "ready"
+      )
+        trackRetention("plan_viewed");
+    };
+    queueMicrotask(record);
+    const listener = AppState.addEventListener("change", record);
+    return () => listener.remove();
+  }, [
+    focused,
+    biometric.ready,
+    biometric.enabled,
+    biometric.locked,
+    heroState?.kind,
+  ]);
 
   const openAccount = useCallback(() => {
     setDrawerOpen(false);
@@ -169,6 +198,14 @@ export default function DashboardScreen() {
           />
         ) : dashboard && heroState ? (
           <>
+            {heroState.kind === "ready" &&
+            paydayReminders.ready &&
+            !paydayReminders.preferences.enabled ? (
+              <SecondaryButton
+                label="Set a payday reminder"
+                onPress={() => router.push("/account")}
+              />
+            ) : null}
             <NextUpCard
               dashboard={dashboard}
               onAddBill={() => {

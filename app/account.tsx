@@ -1,3 +1,4 @@
+import { PaydayReminderCard } from "@features/notifications/payday-reminder-card";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Redirect, useRootNavigationState, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -651,6 +652,8 @@ export default function AccountInfoScreen() {
             ) : null}
           </View>
         </SurfaceCard>
+
+        <PaydayReminderCard />
 
         <SurfaceCard style={styles.formCard}>
           <View style={styles.cardHeader}>

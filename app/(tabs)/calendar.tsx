@@ -1,3 +1,7 @@
+import { useIsFocused } from "@react-navigation/native";
+import { AppState } from "react-native";
+import { useBiometricLock } from "@features/security/biometric-lock-context";
+import { trackRetention } from "@features/retention/tracking";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
@@ -149,6 +153,33 @@ export default function CalendarScreen() {
     () => (forecast ? buildDayMap(forecast) : new Map()),
     [forecast],
   );
+
+  const focused = useIsFocused();
+  const biometric = useBiometricLock();
+  const viewedPayday = view === "calendar" ? selectedDate : timelineDate;
+  const hasViewedPayday =
+    !!viewedPayday && (days.get(viewedPayday)?.paychecks.length ?? 0) > 0;
+  useEffect(() => {
+    const record = () => {
+      if (
+        focused &&
+        biometric.ready &&
+        !(biometric.enabled && biometric.locked) &&
+        hasViewedPayday
+      )
+        trackRetention("payday_plan_reviewed");
+    };
+    queueMicrotask(record);
+    const listener = AppState.addEventListener("change", record);
+    return () => listener.remove();
+  }, [
+    focused,
+    biometric.ready,
+    biometric.enabled,
+    biometric.locked,
+    hasViewedPayday,
+    viewedPayday,
+  ]);
 
   const summary = useMemo(
     () => buildMonthSummary(days, visibleMonth),

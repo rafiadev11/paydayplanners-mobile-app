@@ -1,3 +1,6 @@
+import { useNotificationNavigation } from "@features/notifications/use-notification-navigation";
+import { PaydayReminderProvider } from "@features/notifications/payday-reminder-context";
+import { useRetention } from "@features/retention/use-retention";
 import { Stack, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as SplashScreen from "expo-splash-screen";
@@ -63,6 +66,11 @@ function RootNavigator() {
   const biometricLock = useBiometricLock();
   const lockVisible = Boolean(
     user && biometricLock.enabled && biometricLock.locked,
+  );
+  useRetention(ready && biometricLock.ready && !!user && !lockVisible);
+  useNotificationNavigation(
+    user ? String(user.id) : null,
+    ready && biometricLock.ready && !lockVisible,
   );
   const modalOptions = {
     presentation: "modal" as const,
@@ -366,11 +374,13 @@ function RootLayout() {
     <ApiQueryProvider>
       <AuthProvider>
         <BillReminderProvider>
-          <BiometricLockProvider>
-            <RootNavigator />
-            <WatchPairingCoordinator />
-            <AppUpdateGate />
-          </BiometricLockProvider>
+          <PaydayReminderProvider>
+            <BiometricLockProvider>
+              <RootNavigator />
+              <WatchPairingCoordinator />
+              <AppUpdateGate />
+            </BiometricLockProvider>
+          </PaydayReminderProvider>
         </BillReminderProvider>
       </AuthProvider>
     </ApiQueryProvider>
